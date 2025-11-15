@@ -73,17 +73,29 @@ npm run lint
 ```
 payment-empire/
 ├── src/
-│   ├── app/              # Next.js app directory
-│   │   ├── layout.tsx    # Root layout
-│   │   ├── page.tsx      # Home page
-│   │   └── globals.css   # Global styles
-│   └── lib/              # Utility functions and configurations
-│       ├── axios.ts      # Axios instance configuration
-│       └── services/     # API service modules
-│           └── example.service.ts
-├── public/               # Static files
-├── .env.example          # Environment variables example
-└── package.json          # Dependencies and scripts
+│   ├── app/                    # Next.js app directory
+│   │   ├── api/                # API routes
+│   │   │   └── webhooks/       # Webhook endpoints
+│   │   │       └── payment/    # Payment webhook
+│   │   ├── payment/            # Payment pages
+│   │   │   └── [linkId]/       # Dynamic payment page
+│   │   │       ├── components/ # Payment UI components
+│   │   │       ├── page.tsx    # Route handler
+│   │   │       └── PaymentPage.tsx # Main payment component
+│   │   ├── layout.tsx          # Root layout
+│   │   ├── page.tsx            # Home page
+│   │   └── globals.css         # Global styles
+│   └── lib/                    # Utility functions and configurations
+│       ├── types/              # TypeScript type definitions
+│       │   └── payment.types.ts
+│       ├── services/           # API service modules
+│       │   ├── payment.service.ts
+│       │   └── example.service.ts
+│       └── axios.ts            # Axios instance configuration
+├── public/                     # Static files
+├── PAYMENT_IMPLEMENTATION.md   # Payment system documentation
+├── .env.example                # Environment variables example
+└── package.json                # Dependencies and scripts
 ```
 
 ## Axios Configuration
@@ -168,6 +180,44 @@ export const paymentService = {
 - ✅ Environment variable support
 - ✅ ESLint configuration
 - ✅ Development and production builds
+- ✅ **Payment Page System** - Complete payment flow with QR code integration
+  - Campaign information display with discount breakdown
+  - Customer information collection
+  - Bank QR code payment integration
+  - Webhook for payment confirmation
+  - Automatic user creation and group assignment
+  - Email confirmation system
+
+## Payment System
+
+The application includes a complete payment processing system for customers. When customers click on a payment link created by sales, they are directed to a payment page where they can:
+
+- View complete campaign details (name, description, product, pricing, discounts)
+- Fill in personal information (name, phone, email, address)
+- Make payment via bank transfer using QR code
+- Receive automatic confirmation and login credentials
+
+For detailed documentation on the payment system, see [PAYMENT_IMPLEMENTATION.md](./PAYMENT_IMPLEMENTATION.md).
+
+### Payment Flow
+
+1. Customer clicks payment link → `/payment/[linkId]`
+2. System displays campaign information with pricing
+3. Customer fills in personal information
+4. System generates QR code for bank transfer
+5. Customer scans and pays via banking app
+6. Bank sends webhook confirmation
+7. System creates user account and assigns to group
+8. Customer receives email with login credentials
+
+### Webhook Integration
+
+The system includes a webhook endpoint at `/api/webhooks/payment` to receive payment confirmations from banks. Upon successful payment:
+
+- Order status is updated to "paid"
+- User account is automatically created
+- User is added to the campaign group
+- Confirmation email is sent with login credentials
 
 ## Contributing
 
