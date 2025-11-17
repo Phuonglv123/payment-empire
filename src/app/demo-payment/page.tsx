@@ -5,35 +5,27 @@ import CampaignInfo from '@/app/payment/[linkId]/components/CampaignInfo';
 import CustomerForm from '@/app/payment/[linkId]/components/CustomerForm';
 import PaymentMethod from '@/app/payment/[linkId]/components/PaymentMethod';
 import QRCodeDisplay from '@/app/payment/[linkId]/components/QRCodeDisplay';
-import { Campaign, CustomerInfo } from '@/lib/types/payment.types';
+import { Campaign } from '@/lib/types/payment.types';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 // Mock campaign data for demo purposes
 const mockCampaign: Campaign = {
   id: 'campaign-demo-123',
-  name: 'Gói Premium Membership',
-  description: 'Truy cập đầy đủ tất cả các tính năng cao cấp của hệ thống. Bao gồm: học liệu độc quyền, hỗ trợ 24/7, và nhiều ưu đãi khác.',
-  student_group: {
-    id: 'premium-members',
-    name: 'Nhóm Premium'
-  },
-  status: 'active',
-  original_price: 2000000,
-  km01_price: 1600000,
-  km02_price: 1440000,
-  km03_price: 1368000,
-  campaign_url: 'demo-campaign',
-  campaign_token: 'demo-token',
-  start_date: '2024-01-01',
-  end_date: '2024-12-31',
-  is_active: true,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
+  name: 'Khóa học lập trình Full Stack 2025',
+  description: 'Khóa học 6 tháng với mentor 1-1. Bao gồm: học liệu độc quyền, hỗ trợ 24/7, và nhiều ưu đãi khác.',
 };
 
+interface CustomerFormData {
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  address: string;
+  notes?: string;
+}
+
 export default function DemoPaymentPage() {
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
+  const [customerInfo, setCustomerInfo] = useState<CustomerFormData>({
     fullName: '',
     phoneNumber: '',
     email: '',
@@ -45,8 +37,8 @@ export default function DemoPaymentPage() {
   const handleSubmitPayment = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!customerInfo.fullName || !customerInfo.phoneNumber || !customerInfo.email || !customerInfo.address) {
-      alert('Vui lòng điền đầy đủ thông tin');
+    if (!customerInfo.fullName || !customerInfo.phoneNumber) {
+      alert('Vui lòng điền đầy đủ thông tin bắt buộc');
       return;
     }
 
@@ -110,11 +102,11 @@ export default function DemoPaymentPage() {
             {/* Campaign Information */}
             <CampaignInfo 
               campaign={mockCampaign}
-              selectedPromotion="km03"
-              promotionAmount={632000}
-              isDeposit={false}
-              depositAmount={0}
-              finalAmount={mockCampaign.km03_price}
+              productName="Full Stack Development Course"
+              basePrice={15000000}
+              discountPercent={10}
+              finalPrice={13500000}
+              notes="Ưu đãi đặc biệt cho học viên đăng ký sớm"
             />
 
             {!showQRCode ? (
@@ -141,7 +133,7 @@ export default function DemoPaymentPage() {
             ) : (
               <QRCodeDisplay
                 qrCodeUrl="/next.svg"
-                amount={mockCampaign.km03_price}
+                amount={13500000}
                 isCheckingPayment={true}
               />
             )}

@@ -1,14 +1,20 @@
 'use client';
 
-import { CustomerInfo } from '@/lib/types/payment.types';
+interface CustomerFormData {
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  address: string;
+  notes?: string;
+}
 
 interface CustomerFormProps {
-  customerInfo: CustomerInfo;
-  onChange: (info: CustomerInfo) => void;
+  customerInfo: CustomerFormData;
+  onChange: (info: CustomerFormData) => void;
 }
 
 export default function CustomerForm({ customerInfo, onChange }: CustomerFormProps) {
-  const handleChange = (field: keyof CustomerInfo, value: string) => {
+  const handleChange = (field: keyof CustomerFormData, value: string) => {
     onChange({
       ...customerInfo,
       [field]: value,
@@ -18,7 +24,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <h3 className="text-xl font-semibold text-gray-800 mb-4">
-        Thông tin khách hàng
+        👤 Thông tin của bạn
       </h3>
 
       <div className="space-y-4">
@@ -33,7 +39,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
             value={customerInfo.fullName}
             onChange={(e) => handleChange('fullName', e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-            placeholder="Nhập họ và tên của bạn"
+            placeholder="Nhập họ và tên đầy đủ"
             required
           />
         </div>
@@ -57,7 +63,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
         {/* Email */}
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email <span className="text-red-500">*</span>
+            Email
           </label>
           <input
             type="email"
@@ -65,69 +71,37 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
             value={customerInfo.email}
             onChange={(e) => handleChange('email', e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-            placeholder="example@email.com"
-            required
+            placeholder="email@example.com"
           />
         </div>
 
         {/* Address */}
         <div>
           <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-            Địa chỉ <span className="text-red-500">*</span>
+            Địa chỉ
           </label>
-          <textarea
+          <input
+            type="text"
             id="address"
             value={customerInfo.address}
             onChange={(e) => handleChange('address', e.target.value)}
-            rows={3}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
-            placeholder="Nhập địa chỉ của bạn"
-            required
-          />
-        </div>
-
-        {/* Address Level 1 (Province/City) */}
-        <div>
-          <label htmlFor="addressLevel1" className="block text-sm font-medium text-gray-700 mb-1">
-            Tỉnh/Thành phố
-          </label>
-          <input
-            type="text"
-            id="addressLevel1"
-            value={customerInfo.addressLevel1 || ''}
-            onChange={(e) => handleChange('addressLevel1', e.target.value)}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-            placeholder="Ví dụ: Hồ Chí Minh"
-          />
-        </div>
-
-        {/* Address Level 2 (District) */}
-        <div>
-          <label htmlFor="addressLevel2" className="block text-sm font-medium text-gray-700 mb-1">
-            Quận/Huyện
-          </label>
-          <input
-            type="text"
-            id="addressLevel2"
-            value={customerInfo.addressLevel2 || ''}
-            onChange={(e) => handleChange('addressLevel2', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-            placeholder="Ví dụ: Quận 1"
+            placeholder="123 Nguyễn Huệ, Q1, TPHCM"
           />
         </div>
 
         {/* Notes */}
         <div>
           <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
-            Ghi chú
+            Nhóm học/Ghi chú
           </label>
           <textarea
             id="notes"
             value={customerInfo.notes || ''}
             onChange={(e) => handleChange('notes', e.target.value)}
-            rows={2}
+            rows={3}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
-            placeholder="Thêm ghi chú (nếu có)"
+            placeholder="VD: Muốn học buổi tối, đã có kinh nghiệm HTML/CSS..."
           />
         </div>
       </div>

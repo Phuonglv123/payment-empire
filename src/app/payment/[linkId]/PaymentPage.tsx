@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { paymentService } from '@/lib/services/payment.service';
-import { Campaign, CustomerInfo, PaymentOrder, PaymentLinkData } from '@/lib/types/payment.types';
+import { PaymentLinkData, PublicOrder } from '@/lib/types/payment.types';
 import CampaignInfo from './components/CampaignInfo';
 import CustomerForm from './components/CustomerForm';
 import PaymentMethod from './components/PaymentMethod';
-import QRCodeDisplay from './components/QRCodeDisplay';
+import PaymentInfo from './components/PaymentInfo';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -14,45 +14,46 @@ interface PaymentPageProps {
   linkId: string;
 }
 
+interface CustomerFormData {
+  fullName: string;
+  phoneNumber: string;
+  email: string;
+  address: string;
+  notes?: string;
+}
+
 export default function PaymentPage({ linkId }: PaymentPageProps) {
   const [paymentLinkData, setPaymentLinkData] = useState<PaymentLinkData | null>(null);
-  const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [customerInfo, setCustomerInfo] = useState<CustomerInfo>({
+  const [customerInfo, setCustomerInfo] = useState<CustomerFormData>({
     fullName: '',
     phoneNumber: '',
     email: '',
     address: '',
   });
-  const [order, setOrder] = useState<PaymentOrder | null>(null);
-  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
+  const [order, setOrder] = useState<PublicOrder | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
 
   useEffect(() => {
     loadPaymentData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkId]);
 
-  // Poll for payment status when QR code is displayed
+  // Poll for payment status when order is created
   useEffect(() => {
-    if (!order || order.status === 'paid') return;
+    if (!order || order.payment_status === 'paid') return;
 
     const interval = setInterval(async () => {
       try {
-        setIsCheckingPayment(true);
         const updatedOrder = await paymentService.checkOrderStatus(order.id);
-        if (updatedOrder.status === 'paid') {
+        if (updatedOrder.payment_status === 'paid') {
           setOrder(updatedOrder);
           clearInterval(interval);
-          // Redirect or show success message
           alert('Thanh toán thành công! Bạn sẽ nhận được email xác nhận trong giây lát.');
         }
       } catch (error) {
         console.error('Error checking payment status:', error);
-      } finally {
-        setIsCheckingPayment(false);
       }
     }, 5000); // Check every 5 seconds
 
@@ -67,16 +68,28 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       // Get payment link data which includes campaign information
       const paymentLink = await paymentService.getPaymentLink(linkId);
       
-      if (paymentLink.is_expired || paymentLink.errorCode !== 'SUCCESS') {
-        setError('Link thanh toán không hợp lệ hoặc đã hết hạn');
+      // Check if payment link is valid
+      if (!paymentLink.is_active) {
+        setError('Link thanh toán không còn hoạt động');
+        return;
+      }
+
+      const expiryDate = new Date(paymentLink.expires_at);
+      if (expiryDate < new Date()) {
+        setError('Link thanh toán đã hết hạn');
+        return;
+      }
+
+      if (paymentLink.current_uses >= paymentLink.max_uses) {
+        setError('Link thanh toán đã đạt giới hạn số lượt sử dụng');
         return;
       }
 
       setPaymentLinkData(paymentLink);
-      setCampaign(paymentLink.campaign);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error loading payment data:', err);
-      setError('Không thể tải thông tin thanh toán. Vui lòng thử lại sau.');
+      const errorMessage = err instanceof Error ? err.message : 'Không thể tải thông tin thanh toán. Vui lòng thử lại sau.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -85,11 +98,11 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!campaign || !paymentLinkData) return;
+    if (!paymentLinkData) return;
 
-    // Validate customer info
-    if (!customerInfo.fullName || !customerInfo.phoneNumber || !customerInfo.email || !customerInfo.address) {
-      alert('Vui lòng điền đầy đủ thông tin');
+    // Validate required fields
+    if (!customerInfo.fullName || !customerInfo.phoneNumber) {
+      alert('Vui lòng điền đầy đủ thông tin bắt buộc (Họ tên và Số điện thoại)');
       return;
     }
 
@@ -97,28 +110,22 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       setIsProcessing(true);
       setError(null);
 
-      // Determine payment type based on is_deposit flag
-      const paymentType = paymentLinkData.is_deposit ? 'deposit' : 'full';
+      // Create order with payment link token
+      // Backend will automatically create Virtual Account and return it
+      const newOrder = await paymentService.createOrder({
+        payment_link_token: linkId,
+        customer_name: customerInfo.fullName,
+        customer_phone: customerInfo.phoneNumber,
+        customer_email: customerInfo.email || undefined,
+        customer_address: customerInfo.address || undefined,
+        notes: customerInfo.notes || undefined,
+      });
       
-      // Create order with payment type and promotion code
-      const newOrder = await paymentService.createOrder(
-        campaign.id, 
-        customerInfo,
-        paymentType,
-        paymentLinkData.selected_promotion
-      );
       setOrder(newOrder);
-
-      // Generate QR code
-      const qrResponse = await paymentService.generateQRCode(
-        newOrder.id,
-        'MSB' // Default bank code
-      );
-      
-      setQrCodeUrl(qrResponse.qrCodeUrl);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error('Error processing payment:', err);
-      setError('Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.');
+      const errorMessage = err instanceof Error ? err.message : 'Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.';
+      setError(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -139,7 +146,7 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
     );
   }
 
-  if (error && !campaign) {
+  if (error && !paymentLinkData) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
@@ -155,19 +162,22 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
     );
   }
 
-  if (order && order.status === 'paid') {
+  if (order && order.payment_status === 'paid') {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center bg-gray-50">
           <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-            <div className="text-green-500 text-5xl mb-4">✓</div>
+            <div className="text-green-500 text-5xl mb-4">🎉</div>
             <h2 className="text-2xl font-semibold text-gray-800 mb-2">Thanh toán thành công!</h2>
             <p className="text-gray-600 mb-4">
-              Cảm ơn bạn đã thanh toán. Chúng tôi đã gửi email xác nhận và thông tin đăng nhập đến địa chỉ email của bạn.
+              Cảm ơn bạn đã thanh toán. Chúng tôi đã gửi email xác nhận đến địa chỉ email của bạn.
+            </p>
+            <p className="text-sm text-gray-500 mb-2">
+              Mã đơn hàng: <span className="font-mono font-semibold">{order.order_code}</span>
             </p>
             <p className="text-sm text-gray-500">
-              Mã đơn hàng: <span className="font-mono font-semibold">{order.id}</span>
+              Số tiền: <span className="font-semibold">{new Intl.NumberFormat('vi-VN').format(order.total_amount)} VND</span>
             </p>
           </div>
         </div>
@@ -182,26 +192,26 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       <div className="flex-1 py-8">
         <div className="max-w-7xl mx-auto px-4">
           <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
-            Trang thanh toán
+            🎓 EMPIRE EDUCATION - Trang thanh toán
           </h1>
 
-          {campaign && paymentLinkData && (
+          {paymentLinkData && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left Column - Campaign Information (1/3 width) */}
               <div className="lg:col-span-1">
                 <CampaignInfo 
-                  campaign={campaign}
-                  selectedPromotion={paymentLinkData.selected_promotion}
-                  promotionAmount={paymentLinkData.promotion_amount}
-                  isDeposit={paymentLinkData.is_deposit}
-                  depositAmount={paymentLinkData.deposit_amount}
-                  finalAmount={paymentLinkData.final_amount}
+                  campaign={paymentLinkData.campaign}
+                  productName={paymentLinkData.product_name}
+                  basePrice={paymentLinkData.base_price}
+                  discountPercent={paymentLinkData.discount_percent}
+                  finalPrice={paymentLinkData.final_price}
+                  notes={paymentLinkData.notes}
                 />
               </div>
 
-              {/* Right Column - Payment Form/QR Code (2/3 width) */}
+              {/* Right Column - Payment Form or Payment Info (2/3 width) */}
               <div className="lg:col-span-2">
-                {!qrCodeUrl ? (
+                {!order ? (
                   <form onSubmit={handleSubmitPayment} className="space-y-6">
                     {/* Customer Information Form */}
                     <CustomerForm
@@ -234,17 +244,16 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
                             Đang xử lý...
                           </span>
                         ) : (
-                          'Thanh toán'
+                          'ĐĂNG KÝ VÀ THANH TOÁN'
                         )}
                       </button>
+                      <p className="text-center text-sm text-gray-500 mt-3">
+                        Bằng việc đăng ký, bạn đồng ý với điều khoản sử dụng
+                      </p>
                     </div>
                   </form>
                 ) : (
-                  <QRCodeDisplay
-                    qrCodeUrl={qrCodeUrl}
-                    amount={paymentLinkData.final_amount}
-                    isCheckingPayment={isCheckingPayment}
-                  />
+                  <PaymentInfo order={order} />
                 )}
               </div>
             </div>

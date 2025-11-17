@@ -1,96 +1,66 @@
 import { api } from '@/lib/axios';
 import {
   PaymentLinkData,
-  Campaign,
-  CustomerInfo,
-  PaymentOrder,
-  QRCodeResponse,
+  PublicOrder,
+  ApiResponse,
+  CreateOrderRequest,
 } from '@/lib/types/payment.types';
 
 /**
  * Payment Service
- * Handles all payment-related API calls
+ * Handles all payment-related API calls for the public payment site
  */
 export const paymentService = {
   /**
-   * Get payment link data by link ID
+   * Get payment link data by token
+   * @param token - The payment link token from URL
+   * @returns Payment link data including campaign info, pricing, etc.
    */
-  getPaymentLink: async (linkId: string): Promise<PaymentLinkData> => {
-    const response = await api.get<PaymentLinkData>(
-      `/public/payment-links/${linkId}`
+  getPaymentLink: async (token: string): Promise<PaymentLinkData> => {
+    const response = await api.get<ApiResponse<PaymentLinkData>>(
+      `/public/payment-links/${token}`
     );
-    return response.data;
-  },
-
-  /**
-   * Get campaign details
-   */
-  getCampaign: async (campaignId: string): Promise<Campaign> => {
-    const response = await api.get<Campaign>(`/campaigns/${campaignId}`);
-    return response.data;
-  },
-
-  /**
-   * Create a payment order
-   */
-  createOrder: async (
-    campaignId: string,
-    customerInfo: CustomerInfo,
-    paymentType: 'deposit' | 'full' = 'deposit',
-    promotionCode?: string
-  ): Promise<PaymentOrder> => {
-    const requestBody = {
-      campaign_id: campaignId,
-      customer_name: customerInfo.fullName,
-      customer_email: customerInfo.email,
-      customer_phone: customerInfo.phoneNumber,
-      customer_address: customerInfo.address,
-      address_level_1: customerInfo.addressLevel1 || '',
-      address_level_2: customerInfo.addressLevel2 || '',
-      billing_address: customerInfo.billingAddress || customerInfo.address,
-      payment_type: paymentType,
-      promotion_code: promotionCode || '',
-      notes: customerInfo.notes || '',
-    };
     
-    const response = await api.post<PaymentOrder>('/public/orders', requestBody);
-    return response.data;
+    if (response.data.errorCode !== 'SUCCESS' || !response.data.data) {
+      throw new Error(response.data.message || 'Failed to load payment link');
+    }
+    
+    return response.data.data;
   },
 
   /**
-   * Generate QR code for payment
+   * Create a public order with customer information
+   * Backend automatically creates Virtual Account and returns it in the response
+   * @param orderData - Order creation data including token and customer info
+   * @returns Order details with virtual account information
    */
-  generateQRCode: async (
-    orderId: string,
-    bankCode: string
-  ): Promise<QRCodeResponse> => {
-    const response = await api.post<QRCodeResponse>('/payments/generate-qr', {
-      orderId,
-      bankCode,
-    });
-    return response.data;
+  createOrder: async (orderData: CreateOrderRequest): Promise<PublicOrder> => {
+    const response = await api.post<ApiResponse<PublicOrder>>(
+      '/public/orders',
+      orderData
+    );
+    
+    if (response.data.errorCode !== 'SUCCESS' || !response.data.data) {
+      throw new Error(response.data.message || 'Failed to create order');
+    }
+    
+    return response.data.data;
   },
 
   /**
-   * Check order status
+   * Check order status (for polling payment status)
+   * @param orderId - The order ID
+   * @returns Order with current status
    */
-  checkOrderStatus: async (orderId: string): Promise<PaymentOrder> => {
-    const response = await api.get<PaymentOrder>(`/orders/${orderId}`);
-    return response.data;
-  },
-
-  /**
-   * Update order status (used by webhook)
-   */
-  updateOrderStatus: async (
-    orderId: string,
-    status: PaymentOrder['status'],
-    transactionId?: string
-  ): Promise<PaymentOrder> => {
-    const response = await api.patch<PaymentOrder>(`/orders/${orderId}/status`, {
-      status,
-      transactionId,
-    });
-    return response.data;
+  checkOrderStatus: async (orderId: string): Promise<PublicOrder> => {
+    const response = await api.get<ApiResponse<PublicOrder>>(
+      `/public/orders/${orderId}/status`
+    );
+    
+    if (response.data.errorCode !== 'SUCCESS' || !response.data.data) {
+      throw new Error(response.data.message || 'Failed to check order status');
+    }
+    
+    return response.data.data;
   },
 };
