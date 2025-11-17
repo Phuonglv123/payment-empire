@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { paymentService } from '@/lib/services/payment.service';
-import { Campaign, CustomerInfo, PaymentOrder } from '@/lib/types/payment.types';
+import { Campaign, CustomerInfo, PaymentOrder, PaymentLinkData } from '@/lib/types/payment.types';
 import CampaignInfo from './components/CampaignInfo';
 import CustomerForm from './components/CustomerForm';
 import PaymentMethod from './components/PaymentMethod';
@@ -13,6 +13,7 @@ interface PaymentPageProps {
 }
 
 export default function PaymentPage({ linkId }: PaymentPageProps) {
+  const [paymentLinkData, setPaymentLinkData] = useState<PaymentLinkData | null>(null);
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,11 +65,12 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       // Get payment link data which includes campaign information
       const paymentLink = await paymentService.getPaymentLink(linkId);
       
-      if (!paymentLink.isValid) {
+      if (paymentLink.is_expired || paymentLink.errorCode !== 'SUCCESS') {
         setError('Link thanh toán không hợp lệ hoặc đã hết hạn');
         return;
       }
 
+      setPaymentLinkData(paymentLink);
       setCampaign(paymentLink.campaign);
     } catch (err) {
       console.error('Error loading payment data:', err);
@@ -100,7 +102,7 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       // Generate QR code
       const qrResponse = await paymentService.generateQRCode(
         newOrder.id,
-        campaign.bankCode || 'MSB'
+        'MSB' // Default bank code
       );
       
       setQrCodeUrl(qrResponse.qrCodeUrl);
@@ -154,61 +156,73 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
           Trang thanh toán
         </h1>
 
-        {campaign && (
-          <div className="space-y-6">
-            {/* Campaign Information */}
-            <CampaignInfo campaign={campaign} />
-
-            {!qrCodeUrl ? (
-              <form onSubmit={handleSubmitPayment} className="space-y-6">
-                {/* Customer Information Form */}
-                <CustomerForm
-                  customerInfo={customerInfo}
-                  onChange={setCustomerInfo}
-                />
-
-                {/* Payment Method */}
-                <PaymentMethod bankCode={campaign.bankCode || 'MSB'} />
-
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-red-600 text-sm">{error}</p>
-                  </div>
-                )}
-
-                {/* Submit Button */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <button
-                    type="submit"
-                    disabled={isProcessing}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {isProcessing ? (
-                      <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Đang xử lý...
-                      </span>
-                    ) : (
-                      'Thanh toán'
-                    )}
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <QRCodeDisplay
-                qrCodeUrl={qrCodeUrl}
-                amount={campaign.finalPrice}
-                isCheckingPayment={isCheckingPayment}
+        {campaign && paymentLinkData && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Campaign Information (1/3 width) */}
+            <div className="lg:col-span-1">
+              <CampaignInfo 
+                campaign={campaign}
+                selectedPromotion={paymentLinkData.selected_promotion}
+                promotionAmount={paymentLinkData.promotion_amount}
+                isDeposit={paymentLinkData.is_deposit}
+                depositAmount={paymentLinkData.deposit_amount}
+                finalAmount={paymentLinkData.final_amount}
               />
-            )}
+            </div>
+
+            {/* Right Column - Payment Form/QR Code (2/3 width) */}
+            <div className="lg:col-span-2">
+              {!qrCodeUrl ? (
+                <form onSubmit={handleSubmitPayment} className="space-y-6">
+                  {/* Customer Information Form */}
+                  <CustomerForm
+                    customerInfo={customerInfo}
+                    onChange={setCustomerInfo}
+                  />
+
+                  {/* Payment Method */}
+                  <PaymentMethod bankCode='MSB' />
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <p className="text-red-600 text-sm">{error}</p>
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <button
+                      type="submit"
+                      disabled={isProcessing}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                    >
+                      {isProcessing ? (
+                        <span className="flex items-center justify-center">
+                          <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Đang xử lý...
+                        </span>
+                      ) : (
+                        'Thanh toán'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <QRCodeDisplay
+                  qrCodeUrl={qrCodeUrl}
+                  amount={paymentLinkData.final_amount}
+                  isCheckingPayment={isCheckingPayment}
+                />
+              )}
+            </div>
           </div>
         )}
       </div>

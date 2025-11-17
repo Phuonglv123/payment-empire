@@ -16,7 +16,9 @@ export const paymentService = {
    * Get payment link data by link ID
    */
   getPaymentLink: async (linkId: string): Promise<PaymentLinkData> => {
-    const response = await api.get<PaymentLinkData>(`/payment-links/${linkId}`);
+    const response = await api.get<PaymentLinkData>(
+      `/public/payment-links/${linkId}`
+    );
     return response.data;
   },
 

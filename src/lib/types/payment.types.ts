@@ -1,18 +1,27 @@
 // Payment and Campaign related types
 
+export interface StudentGroup {
+  id: string;
+  name: string;
+}
+
 export interface Campaign {
   id: string;
   name: string;
   description: string;
-  product: string;
-  imageUrl: string;
-  originalPrice: number;
-  discount1?: number; // Discount percentage
-  discount2?: number; // Additional discount percentage
-  discount3?: number; // Additional discount percentage
-  finalPrice: number;
-  bankCode: string; // Default: 'MSB'
-  groupId?: string; // Group to add user to after payment
+  student_group: StudentGroup;
+  status: string;
+  original_price: number;
+  km01_price: number;
+  km02_price: number;
+  km03_price: number;
+  campaign_url: string;
+  campaign_token: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CustomerInfo {
@@ -59,8 +68,14 @@ export interface CreateUserResponse {
 }
 
 export interface PaymentLinkData {
-  linkId: string;
+  errorCode: string;
+  token: string;
   campaign: Campaign;
-  isValid: boolean;
-  expiresAt?: string;
+  selected_promotion: string;
+  promotion_amount: number;
+  is_deposit: boolean;
+  deposit_amount: number;
+  final_amount: number;
+  is_expired: boolean;
+  expires_at: string;
 }
