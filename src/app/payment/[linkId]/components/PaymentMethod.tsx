@@ -19,17 +19,18 @@ export default function PaymentMethod({ bankCode }: PaymentMethodProps) {
   const bankName = BANK_NAMES[bankCode] || bankCode;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-xl font-semibold text-gray-800 mb-4">
-        Phương thức thanh toán
+    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+      <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+        <span className="text-[#F5A623] mr-2">💳</span>
+        <span>Phương thức thanh toán</span>
       </h3>
 
-      <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+      <div className="border-2 border-[#F5A623] rounded-lg p-4 bg-gradient-to-br from-[#FFF8E8] to-white">
         <div className="flex items-center space-x-3">
           {/* Bank Icon */}
-          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+          <div className="w-12 h-12 bg-gradient-to-br from-[#F5A623] to-[#FF8C00] rounded-lg flex items-center justify-center shadow-md">
             <svg
-              className="w-6 h-6 text-blue-600"
+              className="w-6 h-6 text-white"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -45,12 +46,12 @@ export default function PaymentMethod({ bankCode }: PaymentMethodProps) {
 
           {/* Bank Info */}
           <div className="flex-1">
-            <p className="font-semibold text-gray-800">Chuyển khoản ngân hàng</p>
+            <p className="font-bold text-gray-800">Chuyển khoản ngân hàng</p>
             <p className="text-sm text-gray-600">{bankName}</p>
           </div>
 
           {/* Selected Badge */}
-          <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+          <div className="w-6 h-6 bg-[#F5A623] rounded-full flex items-center justify-center shadow-md">
             <svg
               className="w-4 h-4 text-white"
               fill="none"
@@ -68,10 +69,10 @@ export default function PaymentMethod({ bankCode }: PaymentMethodProps) {
         </div>
       </div>
 
-      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="mt-4 bg-gradient-to-r from-[#FFF8E8] to-[#FFE8B8] border border-[#F5A623] rounded-lg p-4">
         <div className="flex">
           <svg
-            className="w-5 h-5 text-blue-600 mr-2 flex-shrink-0"
+            className="w-5 h-5 text-[#F5A623] mr-2 flex-shrink-0"
             fill="currentColor"
             viewBox="0 0 20 20"
           >
@@ -81,7 +82,7 @@ export default function PaymentMethod({ bankCode }: PaymentMethodProps) {
               clipRule="evenodd"
             />
           </svg>
-          <p className="text-sm text-blue-800">
+          <p className="text-sm text-gray-800 font-medium">
             Sau khi nhấn &quot;Thanh toán&quot;, bạn sẽ nhận được mã QR để quét và thực hiện thanh toán qua ứng dụng ngân hàng.
           </p>
         </div>

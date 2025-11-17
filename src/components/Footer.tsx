@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -11,13 +12,14 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="bg-blue-600 text-white rounded-lg px-3 py-2 font-bold text-xl">
-                PE
-              </div>
-              <span className="text-xl font-bold text-white">
-                Payment Empire
-              </span>
+            <div className="mb-4">
+              <Image 
+                src="/logo-footer.png" 
+                alt="Empire Team Logo" 
+                width={180}
+                height={40}
+                className="h-10 w-auto brightness-0 invert"
+              />
             </div>
             <p className="text-gray-400 mb-4 max-w-md">
               Hệ thống quản lý thanh toán hiện đại, an toàn và tiện lợi. 
@@ -26,7 +28,7 @@ export default function Footer() {
             <div className="flex space-x-4">
               <a 
                 href="#" 
-                className="text-gray-400 hover:text-blue-500 transition-colors"
+                className="text-gray-400 hover:text-[#F5A623] transition-colors"
                 aria-label="Facebook"
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -35,7 +37,7 @@ export default function Footer() {
               </a>
               <a 
                 href="#" 
-                className="text-gray-400 hover:text-blue-400 transition-colors"
+                className="text-gray-400 hover:text-[#F5A623] transition-colors"
                 aria-label="Twitter"
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -44,7 +46,7 @@ export default function Footer() {
               </a>
               <a 
                 href="#" 
-                className="text-gray-400 hover:text-blue-600 transition-colors"
+                className="text-gray-400 hover:text-[#F5A623] transition-colors"
                 aria-label="LinkedIn"
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
@@ -59,22 +61,22 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Liên kết nhanh</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-gray-400 hover:text-blue-500 transition-colors">
+                <Link href="/" className="text-gray-400 hover:text-[#F5A623] transition-colors">
                   Trang chủ
                 </Link>
               </li>
               <li>
-                <Link href="/demo-payment" className="text-gray-400 hover:text-blue-500 transition-colors">
+                <Link href="/demo-payment" className="text-gray-400 hover:text-[#F5A623] transition-colors">
                   Demo thanh toán
                 </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-blue-500 transition-colors">
+                <a href="#" className="text-gray-400 hover:text-[#F5A623] transition-colors">
                   Về chúng tôi
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-blue-500 transition-colors">
+                <a href="#" className="text-gray-400 hover:text-[#F5A623] transition-colors">
                   Dịch vụ
                 </a>
               </li>
@@ -89,7 +91,7 @@ export default function Footer() {
                 <svg className="w-5 h-5 mr-2 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-                <a href="mailto:support@paymentempire.com" className="text-gray-400 hover:text-blue-500 transition-colors">
+                <a href="mailto:support@paymentempire.com" className="text-gray-400 hover:text-[#F5A623] transition-colors">
                   support@paymentempire.com
                 </a>
               </li>
@@ -120,13 +122,13 @@ export default function Footer() {
             © {currentYear} Payment Empire. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="text-gray-400 hover:text-blue-500 text-sm transition-colors">
+            <a href="#" className="text-gray-400 hover:text-[#F5A623] text-sm transition-colors">
               Điều khoản dịch vụ
             </a>
-            <a href="#" className="text-gray-400 hover:text-blue-500 text-sm transition-colors">
+            <a href="#" className="text-gray-400 hover:text-[#F5A623] text-sm transition-colors">
               Chính sách bảo mật
             </a>
-            <a href="#" className="text-gray-400 hover:text-blue-500 text-sm transition-colors">
+            <a href="#" className="text-gray-400 hover:text-[#F5A623] text-sm transition-colors">
               Cookie Policy
             </a>
           </div>
