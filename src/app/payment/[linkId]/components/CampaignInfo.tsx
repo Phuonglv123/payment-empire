@@ -4,25 +4,41 @@ import { Campaign } from '@/lib/types/payment.types';
 
 interface CampaignInfoProps {
   campaign: Campaign;
-  productName: string;
-  basePrice: number;
-  discountPercent: number;
-  finalPrice: number;
-  notes?: string;
+  selectedPromotion: 'km01' | 'km02' | 'km03';
+  promotionAmount: number;
+  isDeposit: boolean;
+  depositAmount: number;
+  finalAmount: number;
 }
 
 export default function CampaignInfo({ 
   campaign, 
-  productName,
-  basePrice,
-  discountPercent,
-  finalPrice,
-  notes
+  selectedPromotion,
+  promotionAmount,
+  isDeposit,
+  depositAmount,
+  finalAmount
 }: CampaignInfoProps) {
-  const discountAmount = basePrice - finalPrice;
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
   };
+
+  // Lấy giá gốc dựa trên khuyến mãi được chọn
+  const getOriginalPrice = () => {
+    if (selectedPromotion === 'km01' && campaign.km01_price) {
+      return campaign.original_price || 0;
+    }
+    if (selectedPromotion === 'km02' && campaign.km02_price) {
+      return campaign.original_price || 0;
+    }
+    if (selectedPromotion === 'km03' && campaign.km03_price) {
+      return campaign.original_price || 0;
+    }
+    return campaign.original_price || 0;
+  };
+
+  const originalPrice = getOriginalPrice();
+  const promotionName = selectedPromotion.toUpperCase();
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden sticky top-4">
@@ -44,63 +60,47 @@ export default function CampaignInfo({
           </div>
         )}
 
-        {/* Product Name */}
-        <div className="mb-4">
-          <div className="text-sm font-semibold text-gray-500 mb-1">Sản phẩm:</div>
-          <div className="text-gray-800">{productName}</div>
-        </div>
-
         {/* Pricing Information */}
         <div className="border-t border-gray-200 pt-4 space-y-3">
-          {/* Base Price */}
+          {/* Original Price */}
           <div className="flex justify-between items-center">
             <span className="text-gray-600">Giá gốc:</span>
             <span className="text-gray-400 line-through">
-              {formatCurrency(basePrice)}
+              {formatCurrency(originalPrice)}
             </span>
           </div>
 
-          {/* Discount */}
-          {discountPercent > 0 && (
+          {/* Promotion */}
+          {promotionAmount > 0 && (
             <div className="flex justify-between items-center">
-              <span className="text-gray-600">Giảm giá ({discountPercent}%):</span>
+              <span className="text-gray-600">Khuyến mãi ({promotionName}):</span>
               <span className="text-green-600 font-semibold">
-                -{formatCurrency(discountAmount)}
+                -{formatCurrency(promotionAmount)}
               </span>
             </div>
           )}
 
-          {/* Total Discount Badge */}
-          {discountPercent > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+          {/* Deposit Badge (if applicable) */}
+          {isDeposit && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <div className="flex items-center justify-center">
-                <span className="text-red-600 font-bold text-lg">
-                  🎉 Tiết kiệm {discountPercent}%
+                <span className="text-blue-600 font-bold text-sm">
+                  💰 Thanh toán đặt cọc
                 </span>
               </div>
             </div>
           )}
 
-          {/* Final Price */}
+          {/* Final Amount */}
           <div className="flex justify-between items-center pt-3 border-t-2 border-gray-300">
             <span className="text-lg font-semibold text-gray-800">
-              Tổng thanh toán:
+              {isDeposit ? 'Số tiền đặt cọc:' : 'Tổng thanh toán:'}
             </span>
             <span className="text-2xl font-bold text-blue-600">
-              {formatCurrency(finalPrice)}
+              {formatCurrency(finalAmount)}
             </span>
           </div>
         </div>
-
-        {/* Notes */}
-        {notes && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="text-sm font-semibold text-blue-700 mb-1">💡 Ghi chú:</div>
-              <p className="text-sm text-blue-600">{notes}</p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

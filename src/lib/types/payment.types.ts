@@ -52,19 +52,30 @@ export interface CreateOrderRequest {
   customer_address?: string;
   student_group?: string;
   notes?: string;
+  campaign_id: string;
 }
 
 // Virtual Account info returned from backend
 export interface VirtualAccount {
   id: string;
   account_number: string;
-  bank_name: string;
-  account_name: string;
-  amount: number;
-  qr_code: string; // Base64 encoded QR code image
-  expiry_date: string; // ISO 8601 format
-  status: 'active' | 'paid' | 'expired';
+  reference_number: string;
+  name: string;
+  pay_type: string;
+  max_amount: number;
+  min_amount: number;
+  equal_amount: number;
+  detail1: string;
+  detail2: string;
+  detail3: string;
+  email: string;
+  phone: string;
+  expiry_date: string;
+  status: string;
+  order_id: string;
+  qr_code: string;
   created_at: string;
+  updated_at: string;
 }
 
 // Public Order response from backend
@@ -72,20 +83,24 @@ export interface PublicOrder {
   id: string;
   order_code: string;
   customer_name: string;
-  customer_phone: string;
   customer_email?: string;
+  customer_phone: string;
   customer_address?: string;
+  quantity: number;
+  unit_price: number;
+  original_amount: number;
   total_amount: number;
-  order_status: 'confirmed' | 'cancelled' | 'completed';
+  order_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   payment_status: 'unpaid' | 'paid' | 'refunded';
-  student_group?: string;
+  payment_type: 'full' | 'deposit';
+  invoice_status: 'not_issued' | 'issued' | 'sent';
+  confirmation_status: 'not_sent' | 'sent';
+  campaign_id: string;
+  campaign: Campaign;
   notes?: string;
-  created_at: string;
-  campaign: {
-    id: string;
-    name: string;
-  };
   virtual_account?: VirtualAccount;
+  created_at: string;
+  updated_at: string;
 }
 
 // Legacy PaymentOrder interface (kept for backward compatibility)
@@ -127,19 +142,16 @@ export interface CreateUserResponse {
 
 // Payment Link data structure from backend
 export interface PaymentLinkData {
-  id: string;
+  errorCode: string;
   token: string;
   campaign: Campaign;
-  collaborator?: Collaborator;
-  product_name: string;
-  base_price: number;
-  discount_percent: number;
-  final_price: number;
-  max_uses: number;
-  current_uses: number;
+  selected_promotion: 'km01' | 'km02' | 'km03';
+  promotion_amount: number;
+  is_deposit: boolean;
+  deposit_amount: number;
+  final_amount: number;
+  is_expired: boolean;
   expires_at: string;
-  is_active: boolean;
-  notes?: string;
 }
 
 // API Response wrapper

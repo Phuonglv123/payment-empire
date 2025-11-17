@@ -58,13 +58,24 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
     return new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
   };
 
-  const downloadQR = () => {
+  const downloadQR = async () => {
     if (!order.virtual_account?.qr_code) return;
 
-    const link = document.createElement('a');
-    link.href = order.virtual_account.qr_code;
-    link.download = `QR-${order.order_code}.png`;
-    link.click();
+    try {
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(order.virtual_account.qr_code)}`;
+      const response = await fetch(qrUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `QR-${order.order_code}.png`;
+      link.click();
+      
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading QR code:', error);
+    }
   };
 
   if (!order.virtual_account) {
@@ -111,26 +122,41 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
         <div className="space-y-4 mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b">
             <span className="font-semibold text-gray-700 mb-1 sm:mb-0">🏦 Ngân hàng:</span>
-            <span className="text-gray-900">{va.bank_name} - Ngân hàng TMCP Hàng Hải Việt Nam</span>
+            <span className="text-gray-900">MSB - Ngân hàng TMCP Hàng Hải Việt Nam</span>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b">
             <span className="font-semibold text-gray-700 mb-1 sm:mb-0">👤 Chủ tài khoản:</span>
-            <span className="text-gray-900">{va.account_name}</span>
+            <span className="text-gray-900">{va.name}</span>
+          </div>
+
+          <div className="flex flex-col py-3 border-b">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold text-gray-700">🎫 Mã thanh toán:</span>
+              <button
+                onClick={() => copyToClipboard(order.order_code, 'order_code')}
+                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-sm transition-colors"
+              >
+                {copySuccess === 'order_code' ? '✓ Đã copy' : '📋 Copy'}
+              </button>
+            </div>
+            <span className="text-xl font-bold text-gray-900 font-mono">
+              {order.order_code}
+            </span>
           </div>
 
           <div className="flex flex-col py-3 border-b">
             <div className="flex justify-between items-center mb-2">
               <span className="font-semibold text-gray-700">💰 Số tiền:</span>
               <button
-                onClick={() => copyToClipboard(va.amount.toString(), 'amount')}
+                onClick={() => copyToClipboard(va.equal_amount.toString(), 'amount')}
                 className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-sm transition-colors"
               >
                 {copySuccess === 'amount' ? '✓ Đã copy' : '📋 Copy'}
               </button>
             </div>
             <span className="text-2xl font-bold text-blue-600">
-              {formatCurrency(va.amount)}
+              {formatCurrency(va.equal_amount)}
             </span>
           </div>
 
@@ -159,11 +185,16 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
             <div className="border-4 border-blue-500 rounded-lg p-3 bg-white">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={va.qr_code}
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(va.qr_code)}`}
                 alt="QR Code thanh toán"
                 className="w-64 h-64"
               />
             </div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-3 mb-4">
+            <p className="text-xs text-gray-600 text-center whitespace-pre-wrap break-all">
+              {va.qr_code}
+            </p>
           </div>
           <div className="text-center">
             <button
@@ -190,12 +221,14 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
             <li className="flex items-start">
               <span className="text-blue-600 mr-2">•</span>
               <span>
-                Chuyển khoản <strong>ĐÚNG số tiền</strong>: {formatCurrency(va.amount)}
+                Chuyển khoản <strong>ĐÚNG số tiền</strong>: {formatCurrency(va.equal_amount)}
               </span>
             </li>
             <li className="flex items-start">
               <span className="text-blue-600 mr-2">•</span>
-              <span>Không cần ghi nội dung chuyển khoản</span>
+              <span>
+                Nội dung: <strong>{va.detail1}</strong>
+              </span>
             </li>
             <li className="flex items-start">
               <span className="text-blue-600 mr-2">•</span>

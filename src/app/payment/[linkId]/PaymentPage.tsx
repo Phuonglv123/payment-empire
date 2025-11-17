@@ -68,20 +68,15 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       // Get payment link data which includes campaign information
       const paymentLink = await paymentService.getPaymentLink(linkId);
       
-      // Check if payment link is valid
-      if (!paymentLink.is_active) {
-        setError('Link thanh toán không còn hoạt động');
+      // Check if payment link is expired
+      if (paymentLink.is_expired) {
+        setError('Link thanh toán đã hết hạn');
         return;
       }
 
       const expiryDate = new Date(paymentLink.expires_at);
       if (expiryDate < new Date()) {
         setError('Link thanh toán đã hết hạn');
-        return;
-      }
-
-      if (paymentLink.current_uses >= paymentLink.max_uses) {
-        setError('Link thanh toán đã đạt giới hạn số lượt sử dụng');
         return;
       }
 
@@ -112,7 +107,8 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
 
       // Create order with payment link token
       // Backend will automatically create Virtual Account and return it
-      const newOrder = await paymentService.createOrder({
+      const newOrder = await paymentService.createOrder( {
+        campaign_id: paymentLinkData.campaign.id,
         payment_link_token: linkId,
         customer_name: customerInfo.fullName,
         customer_phone: customerInfo.phoneNumber,
@@ -201,11 +197,11 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
               <div className="lg:col-span-1">
                 <CampaignInfo 
                   campaign={paymentLinkData.campaign}
-                  productName={paymentLinkData.product_name}
-                  basePrice={paymentLinkData.base_price}
-                  discountPercent={paymentLinkData.discount_percent}
-                  finalPrice={paymentLinkData.final_price}
-                  notes={paymentLinkData.notes}
+                  selectedPromotion={paymentLinkData.selected_promotion}
+                  promotionAmount={paymentLinkData.promotion_amount}
+                  isDeposit={paymentLinkData.is_deposit}
+                  depositAmount={paymentLinkData.deposit_amount}
+                  finalAmount={paymentLinkData.final_amount}
                 />
               </div>
 
