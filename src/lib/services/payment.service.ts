@@ -35,12 +35,25 @@ export const paymentService = {
    */
   createOrder: async (
     campaignId: string,
-    customerInfo: CustomerInfo
+    customerInfo: CustomerInfo,
+    paymentType: 'deposit' | 'full' = 'deposit',
+    promotionCode?: string
   ): Promise<PaymentOrder> => {
-    const response = await api.post<PaymentOrder>('/orders', {
-      campaignId,
-      customerInfo,
-    });
+    const requestBody = {
+      campaign_id: campaignId,
+      customer_name: customerInfo.fullName,
+      customer_email: customerInfo.email,
+      customer_phone: customerInfo.phoneNumber,
+      customer_address: customerInfo.address,
+      address_level_1: customerInfo.addressLevel1 || '',
+      address_level_2: customerInfo.addressLevel2 || '',
+      billing_address: customerInfo.billingAddress || customerInfo.address,
+      payment_type: paymentType,
+      promotion_code: promotionCode || '',
+      notes: customerInfo.notes || '',
+    };
+    
+    const response = await api.post<PaymentOrder>('/public/orders', requestBody);
     return response.data;
   },
 

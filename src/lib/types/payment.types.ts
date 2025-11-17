@@ -29,6 +29,24 @@ export interface CustomerInfo {
   phoneNumber: string;
   email: string;
   address: string;
+  addressLevel1?: string;
+  addressLevel2?: string;
+  billingAddress?: string;
+  notes?: string;
+}
+
+export interface CreateOrderRequest {
+  campaign_id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  customer_address: string;
+  address_level_1?: string;
+  address_level_2?: string;
+  billing_address?: string;
+  payment_type: 'deposit' | 'full';
+  promotion_code?: string;
+  notes?: string;
 }
 
 export interface PaymentOrder {

@@ -85,7 +85,7 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!campaign) return;
+    if (!campaign || !paymentLinkData) return;
 
     // Validate customer info
     if (!customerInfo.fullName || !customerInfo.phoneNumber || !customerInfo.email || !customerInfo.address) {
@@ -97,8 +97,16 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       setIsProcessing(true);
       setError(null);
 
-      // Create order
-      const newOrder = await paymentService.createOrder(campaign.id, customerInfo);
+      // Determine payment type based on is_deposit flag
+      const paymentType = paymentLinkData.is_deposit ? 'deposit' : 'full';
+      
+      // Create order with payment type and promotion code
+      const newOrder = await paymentService.createOrder(
+        campaign.id, 
+        customerInfo,
+        paymentType,
+        paymentLinkData.selected_promotion
+      );
       setOrder(newOrder);
 
       // Generate QR code

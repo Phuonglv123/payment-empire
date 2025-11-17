@@ -85,6 +85,51 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
             required
           />
         </div>
+
+        {/* Address Level 1 (Province/City) */}
+        <div>
+          <label htmlFor="addressLevel1" className="block text-sm font-medium text-gray-700 mb-1">
+            Tỉnh/Thành phố
+          </label>
+          <input
+            type="text"
+            id="addressLevel1"
+            value={customerInfo.addressLevel1 || ''}
+            onChange={(e) => handleChange('addressLevel1', e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+            placeholder="Ví dụ: Hồ Chí Minh"
+          />
+        </div>
+
+        {/* Address Level 2 (District) */}
+        <div>
+          <label htmlFor="addressLevel2" className="block text-sm font-medium text-gray-700 mb-1">
+            Quận/Huyện
+          </label>
+          <input
+            type="text"
+            id="addressLevel2"
+            value={customerInfo.addressLevel2 || ''}
+            onChange={(e) => handleChange('addressLevel2', e.target.value)}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+            placeholder="Ví dụ: Quận 1"
+          />
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+            Ghi chú
+          </label>
+          <textarea
+            id="notes"
+            value={customerInfo.notes || ''}
+            onChange={(e) => handleChange('notes', e.target.value)}
+            rows={2}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
+            placeholder="Thêm ghi chú (nếu có)"
+          />
+        </div>
       </div>
 
       <p className="text-xs text-gray-500 mt-4">
