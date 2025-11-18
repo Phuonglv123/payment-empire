@@ -22,9 +22,10 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-xl font-semibold text-gray-800 mb-4">
-        👤 Thông tin của bạn
+    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+      <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+        <span className="text-[#F5A623] mr-2">👤</span>
+        <span>Thông tin của bạn</span>
       </h3>
 
       <div className="space-y-4">
@@ -38,7 +39,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
             id="fullName"
             value={customerInfo.fullName}
             onChange={(e) => handleChange('fullName', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F5A623] focus:border-[#F5A623] outline-none transition-all"
             placeholder="Nhập họ và tên đầy đủ"
             required
           />
@@ -54,7 +55,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
             id="phoneNumber"
             value={customerInfo.phoneNumber}
             onChange={(e) => handleChange('phoneNumber', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F5A623] focus:border-[#F5A623] outline-none transition-all"
             placeholder="0912345678"
             required
           />
@@ -70,7 +71,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
             id="email"
             value={customerInfo.email}
             onChange={(e) => handleChange('email', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F5A623] focus:border-[#F5A623] outline-none transition-all"
             placeholder="email@example.com"
           />
         </div>
@@ -85,7 +86,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
             id="address"
             value={customerInfo.address}
             onChange={(e) => handleChange('address', e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F5A623] focus:border-[#F5A623] outline-none transition-all"
             placeholder="123 Nguyễn Huệ, Q1, TPHCM"
           />
         </div>
@@ -100,7 +101,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
             value={customerInfo.notes || ''}
             onChange={(e) => handleChange('notes', e.target.value)}
             rows={3}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-none"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F5A623] focus:border-[#F5A623] outline-none transition-all resize-none"
             placeholder="VD: Muốn học buổi tối, đã có kinh nghiệm HTML/CSS..."
           />
         </div>

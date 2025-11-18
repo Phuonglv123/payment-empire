@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Header() {
   return (
@@ -10,12 +11,14 @@ export default function Header() {
           {/* Logo and Brand */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3">
-              <div className="bg-blue-600 text-white rounded-lg px-3 py-2 font-bold text-xl">
-                PE
-              </div>
-              <span className="text-xl font-bold text-gray-800 hidden sm:block">
-                Payment Empire
-              </span>
+              <Image 
+                src="/logo-footer.png" 
+                alt="Empire Team Logo" 
+                width={180}
+                height={40}
+                className="h-10 w-auto"
+                priority
+              />
             </Link>
           </div>
 
@@ -23,19 +26,19 @@ export default function Header() {
           <nav className="flex items-center space-x-6">
             <Link 
               href="/" 
-              className="text-gray-600 hover:text-blue-600 transition-colors font-medium hidden sm:block"
+              className="text-gray-600 hover:text-[#F5A623] transition-colors font-medium hidden sm:block"
             >
               Trang chủ
             </Link>
             <Link 
               href="/demo-payment" 
-              className="text-gray-600 hover:text-blue-600 transition-colors font-medium hidden sm:block"
+              className="text-gray-600 hover:text-[#F5A623] transition-colors font-medium hidden sm:block"
             >
               Demo
             </Link>
             <a 
               href="mailto:support@paymentempire.com" 
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
+              className="bg-[#F5A623] hover:bg-[#E09200] text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm"
             >
               Hỗ trợ
             </a>

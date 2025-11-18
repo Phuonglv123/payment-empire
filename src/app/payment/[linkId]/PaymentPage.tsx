@@ -133,7 +133,7 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
         <Header />
         <div className="flex-1 flex items-center justify-center bg-gray-50">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F5A623] mx-auto"></div>
             <p className="mt-4 text-gray-600">Đang tải thông tin...</p>
           </div>
         </div>
@@ -163,18 +163,20 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       <div className="min-h-screen flex flex-col">
         <Header />
         <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-            <div className="text-green-500 text-5xl mb-4">🎉</div>
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">Thanh toán thành công!</h2>
-            <p className="text-gray-600 mb-4">
+          <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center border border-gray-100">
+            <div className="text-5xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Thanh toán thành công!</h2>
+            <p className="text-gray-600 mb-6">
               Cảm ơn bạn đã thanh toán. Chúng tôi đã gửi email xác nhận đến địa chỉ email của bạn.
             </p>
-            <p className="text-sm text-gray-500 mb-2">
-              Mã đơn hàng: <span className="font-mono font-semibold">{order.order_code}</span>
-            </p>
-            <p className="text-sm text-gray-500">
-              Số tiền: <span className="font-semibold">{new Intl.NumberFormat('vi-VN').format(order.total_amount)} VND</span>
-            </p>
+            <div className="bg-gradient-to-br from-[#FFF8E8] to-[#FFE8B8] rounded-lg p-4 space-y-2">
+              <p className="text-sm text-gray-600">
+                Mã đơn hàng: <span className="font-mono font-bold text-[#F5A623]">{order.order_code}</span>
+              </p>
+              <p className="text-sm text-gray-600">
+                Số tiền: <span className="font-bold text-[#F5A623]">{new Intl.NumberFormat('vi-VN').format(order.total_amount)} VND</span>
+              </p>
+            </div>
           </div>
         </div>
         <Footer />
@@ -183,13 +185,16 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-[#FFF8E8]">
       <Header />
       <div className="flex-1 py-8">
         <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">
-            🎓 EMPIRE EDUCATION - Trang thanh toán
-          </h1>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-gray-800 mb-2">
+              <span className="text-[#F5A623]">👑</span> EMPIRE EDUCATION
+            </h1>
+            <p className="text-lg text-gray-600">Trang thanh toán</p>
+          </div>
 
           {paymentLinkData && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -225,11 +230,11 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
                     )}
 
                     {/* Submit Button */}
-                    <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
                       <button
                         type="submit"
                         disabled={isProcessing}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        className="w-full bg-gradient-to-r from-[#F5A623] to-[#FF8C00] hover:from-[#E09200] hover:to-[#F57C00] text-white font-bold py-4 px-6 rounded-lg transition-all transform hover:scale-[1.02] disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none shadow-md"
                       >
                         {isProcessing ? (
                           <span className="flex items-center justify-center">
@@ -240,7 +245,10 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
                             Đang xử lý...
                           </span>
                         ) : (
-                          'ĐĂNG KÝ VÀ THANH TOÁN'
+                          <span className="flex items-center justify-center">
+                            <span>👑</span>
+                            <span className="ml-2">ĐĂNG KÝ VÀ THANH TOÁN</span>
+                          </span>
                         )}
                       </button>
                       <p className="text-center text-sm text-gray-500 mt-3">

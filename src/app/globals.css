@@ -3,11 +3,22 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  /* Empire Team Brand Colors */
+  --empire-gold: #F5A623;
+  --empire-gold-dark: #E09200;
+  --empire-gold-light: #FFB84D;
+  --empire-gold-bg: #FFF8E8;
+  --empire-orange: #FF8C00;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-empire-gold: var(--empire-gold);
+  --color-empire-gold-dark: var(--empire-gold-dark);
+  --color-empire-gold-light: var(--empire-gold-light);
+  --color-empire-gold-bg: var(--empire-gold-bg);
+  --color-empire-orange: var(--empire-orange);
 }
 
 @media (prefers-color-scheme: dark) {
