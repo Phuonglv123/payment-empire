@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  payment-empire:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: payment-empire
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      # Add your environment variables here
+      # - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+      # - API_SECRET=${API_SECRET}
+    networks:
+      - payment-network
+
+networks:
+  payment-network:
+    driver: bridge
