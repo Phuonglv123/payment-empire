@@ -90,24 +90,24 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       return;
     }
 
-    if (!customerInfo.province || !customerInfo.ward || !customerInfo.addressDetail) {
+    if (!customerInfo.province || !customerInfo.district || !customerInfo.ward || !customerInfo.addressDetail) {
       alert('Vui lòng điền đầy đủ địa chỉ xuất hoá đơn');
       return;
     }
 
     if (!customerInfo.isShippingSameAsBilling) {
-      if (!customerInfo.shippingProvince || !customerInfo.shippingWard || !customerInfo.shippingAddressDetail) {
+      if (!customerInfo.shippingProvince || !customerInfo.shippingDistrict || !customerInfo.shippingWard || !customerInfo.shippingAddressDetail) {
         alert('Vui lòng điền đầy đủ địa chỉ nhận sách');
         return;
       }
     }
 
     // Construct addresses
-    const billingAddress = `${customerInfo.addressDetail}, ${customerInfo.ward.name}, ${customerInfo.province.name}`;
+    const billingAddress = `${customerInfo.addressDetail}, ${customerInfo.ward.name}, ${customerInfo.district.name}, ${customerInfo.province.name}`;
     
     let finalNotes = customerInfo.notes || '';
-    if (!customerInfo.isShippingSameAsBilling && customerInfo.shippingProvince && customerInfo.shippingWard) {
-      const shippingAddress = `${customerInfo.shippingAddressDetail || ''}, ${customerInfo.shippingWard.name}, ${customerInfo.shippingProvince.name}`;
+    if (!customerInfo.isShippingSameAsBilling && customerInfo.shippingProvince && customerInfo.shippingDistrict && customerInfo.shippingWard) {
+      const shippingAddress = `${customerInfo.shippingAddressDetail || ''}, ${customerInfo.shippingWard.name}, ${customerInfo.shippingDistrict.name}, ${customerInfo.shippingProvince.name}`;
       finalNotes += `\n[Địa chỉ nhận sách: ${shippingAddress}]`;
     }
 

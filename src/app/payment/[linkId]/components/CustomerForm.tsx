@@ -10,10 +10,14 @@ export interface Province {
   name: string;
 }
 
+export interface District {
+  code: string;
+  name: string;
+}
+
 export interface Ward {
   code: string;
   name: string;
-  fullName: string;
 }
 
 export interface CustomerFormData {
@@ -21,14 +25,16 @@ export interface CustomerFormData {
   phoneNumber: string;
   email: string;
   
-  // Invoice Address (Level 2)
+  // Invoice Address (Level 3)
   province?: Province;
+  district?: District;
   ward?: Ward;
   addressDetail: string;
 
   // Shipping Address (Level 3)
   isShippingSameAsBilling: boolean;
   shippingProvince?: Province;
+  shippingDistrict?: District;
   shippingWard?: Ward;
   shippingAddressDetail?: string;
 
@@ -42,10 +48,19 @@ interface CustomerFormProps {
 
 export default function CustomerForm({ customerInfo, onChange }: CustomerFormProps) {
   const [provinces, setProvinces] = useState<Province[]>([]);
+  
+  const [districts, setDistricts] = useState<District[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
+  
+  const [shippingDistricts, setShippingDistricts] = useState<District[]>([]);
   const [shippingWards, setShippingWards] = useState<Ward[]>([]);
+
   const [loadingProvinces, setLoadingProvinces] = useState(false);
+  
+  const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
+  
+  const [loadingShippingDistricts, setLoadingShippingDistricts] = useState(false);
   const [loadingShippingWards, setLoadingShippingWards] = useState(false);
 
   // Fetch Provinces
@@ -53,9 +68,13 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
     const fetchProvinces = async () => {
       try {
         setLoadingProvinces(true);
-        const response = await axios.get('https://api-geo-three.vercel.app/api/provinces');
-        if (response.data && response.data.data) {
-          setProvinces(response.data.data);
+        const response = await axios.get('https://provinces.open-api.vn/api/?depth=1');
+        if (response.data) {
+          const mappedProvinces = response.data.map((p: any) => ({
+            code: String(p.code),
+            name: p.name
+          }));
+          setProvinces(mappedProvinces);
         }
       } catch (error) {
         console.error('Error fetching provinces:', error);
@@ -66,18 +85,49 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
     fetchProvinces();
   }, []);
 
+  // Fetch Districts for Invoice Address
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      if (!customerInfo.province?.code) {
+        setDistricts([]);
+        setWards([]);
+        return;
+      }
+      try {
+        setLoadingDistricts(true);
+        const response = await axios.get(`https://provinces.open-api.vn/api/p/${customerInfo.province.code}?depth=2`);
+        if (response.data && response.data.districts) {
+           const mappedDistricts = response.data.districts.map((d: any) => ({
+            code: String(d.code),
+            name: d.name
+          }));
+          setDistricts(mappedDistricts);
+        }
+      } catch (error) {
+        console.error('Error fetching districts:', error);
+      } finally {
+        setLoadingDistricts(false);
+      }
+    };
+    fetchDistricts();
+  }, [customerInfo.province?.code]);
+
   // Fetch Wards for Invoice Address
   useEffect(() => {
     const fetchWards = async () => {
-      if (!customerInfo.province?.code) {
+      if (!customerInfo.district?.code) {
         setWards([]);
         return;
       }
       try {
         setLoadingWards(true);
-        const response = await axios.get(`https://api-geo.galaxyedu.io/api/provinces/${customerInfo.province.code}`);
-        if (response.data && response.data.data && response.data.data.wards) {
-          setWards(response.data.data.wards);
+        const response = await axios.get(`https://provinces.open-api.vn/api/d/${customerInfo.district.code}?depth=2`);
+        if (response.data && response.data.wards) {
+           const mappedWards = response.data.wards.map((w: any) => ({
+            code: String(w.code),
+            name: w.name
+          }));
+          setWards(mappedWards);
         }
       } catch (error) {
         console.error('Error fetching wards:', error);
@@ -86,20 +136,51 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
       }
     };
     fetchWards();
-  }, [customerInfo.province?.code]);
+  }, [customerInfo.district?.code]);
+
+  // Fetch Districts for Shipping Address
+  useEffect(() => {
+    const fetchShippingDistricts = async () => {
+      if (!customerInfo.shippingProvince?.code) {
+        setShippingDistricts([]);
+        setShippingWards([]);
+        return;
+      }
+      try {
+        setLoadingShippingDistricts(true);
+        const response = await axios.get(`https://provinces.open-api.vn/api/p/${customerInfo.shippingProvince.code}?depth=2`);
+        if (response.data && response.data.districts) {
+           const mappedDistricts = response.data.districts.map((d: any) => ({
+            code: String(d.code),
+            name: d.name
+          }));
+          setShippingDistricts(mappedDistricts);
+        }
+      } catch (error) {
+        console.error('Error fetching shipping districts:', error);
+      } finally {
+        setLoadingShippingDistricts(false);
+      }
+    };
+    fetchShippingDistricts();
+  }, [customerInfo.shippingProvince?.code]);
 
   // Fetch Wards for Shipping Address
   useEffect(() => {
     const fetchShippingWards = async () => {
-      if (!customerInfo.shippingProvince?.code) {
+      if (!customerInfo.shippingDistrict?.code) {
         setShippingWards([]);
         return;
       }
       try {
         setLoadingShippingWards(true);
-        const response = await axios.get(`https://api-geo.galaxyedu.io/api/provinces/${customerInfo.shippingProvince.code}`);
-        if (response.data && response.data.data && response.data.data.wards) {
-          setShippingWards(response.data.data.wards);
+        const response = await axios.get(`https://provinces.open-api.vn/api/d/${customerInfo.shippingDistrict.code}?depth=2`);
+        if (response.data && response.data.wards) {
+           const mappedWards = response.data.wards.map((w: any) => ({
+            code: String(w.code),
+            name: w.name
+          }));
+          setShippingWards(mappedWards);
         }
       } catch (error) {
         console.error('Error fetching shipping wards:', error);
@@ -108,7 +189,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
       }
     };
     fetchShippingWards();
-  }, [customerInfo.shippingProvince?.code]);
+  }, [customerInfo.shippingDistrict?.code]);
 
   const handleChange = (field: keyof CustomerFormData, value: any) => {
     onChange({
@@ -124,19 +205,38 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
       onChange({
         ...customerInfo,
         shippingProvince: province,
-        shippingWard: undefined, // Reset ward when province changes
+        shippingDistrict: undefined,
+        shippingWard: undefined,
       });
     } else {
       onChange({
         ...customerInfo,
         province: province,
-        ward: undefined, // Reset ward when province changes
+        district: undefined,
+        ward: undefined,
+      });
+    }
+  };
+
+  const handleDistrictChange = (districtCode: string, isShipping: boolean = false) => {
+    if (isShipping) {
+      const district = shippingDistricts.find(d => d.code === districtCode);
+      onChange({
+        ...customerInfo,
+        shippingDistrict: district,
+        shippingWard: undefined,
+      });
+    } else {
+      const district = districts.find(d => d.code === districtCode);
+      onChange({
+        ...customerInfo,
+        district: district,
+        ward: undefined,
       });
     }
   };
 
   const handleWardChange = (wardCode: string, isShipping: boolean = false) => {
-    
     if (isShipping) {
       const ward = shippingWards.find(w => w.code === wardCode);
       onChange({
@@ -262,6 +362,21 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
               />
             </div>
 
+            {/* District */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quận / Huyện <span className="text-red-500">*</span>
+              </label>
+              <SearchableSelect
+                options={districts}
+                value={customerInfo.district?.code}
+                onChange={(val) => handleDistrictChange(val, false)}
+                placeholder={loadingDistricts ? "Đang tải..." : "Chọn Quận / Huyện"}
+                disabled={!customerInfo.province || loadingDistricts}
+                loading={loadingDistricts}
+              />
+            </div>
+
             {/* Ward */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -272,13 +387,13 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
                 value={customerInfo.ward?.code}
                 onChange={(val) => handleWardChange(val, false)}
                 placeholder={loadingWards ? "Đang tải..." : "Chọn Phường / Xã"}
-                disabled={!customerInfo.province || loadingWards}
+                disabled={!customerInfo.district || loadingWards}
                 loading={loadingWards}
               />
             </div>
 
             {/* Detail Address */}
-            <div className="col-span-2">
+            <div className="col-span-2 md:col-span-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Địa chỉ chi tiết <span className="text-red-500">*</span>
               </label>
@@ -335,6 +450,22 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
                   />
                 </div>
 
+                {/* Shipping District */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Quận / Huyện
+                  </label>
+                  <SearchableSelect
+                    options={shippingDistricts}
+                    value={customerInfo.shippingDistrict?.code}
+                    onChange={(val) => handleDistrictChange(val, true)}
+                    placeholder={loadingShippingDistricts ? "Đang tải..." : "Chọn Quận / Huyện"}
+                    disabled={!customerInfo.shippingProvince || loadingShippingDistricts}
+                    loading={loadingShippingDistricts}
+                    className="bg-white"
+                  />
+                </div>
+
                 {/* Shipping Ward */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -345,14 +476,14 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
                     value={customerInfo.shippingWard?.code}
                     onChange={(val) => handleWardChange(val, true)}
                     placeholder={loadingShippingWards ? "Đang tải..." : "Chọn Phường / Xã"}
-                    disabled={!customerInfo.shippingProvince || loadingShippingWards}
+                    disabled={!customerInfo.shippingDistrict || loadingShippingWards}
                     loading={loadingShippingWards}
                     className="bg-white"
                   />
                 </div>
 
                 {/* Shipping Detail Address */}
-                <div className="col-span-2">
+                <div className="col-span-2 md:col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Địa chỉ chi tiết
                   </label>
