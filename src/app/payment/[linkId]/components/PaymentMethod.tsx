@@ -1,5 +1,7 @@
 'use client';
 
+import { CreditCardIcon, CheckCircleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+
 interface PaymentMethodProps {
   bankCode: string;
 }
@@ -19,73 +21,38 @@ export default function PaymentMethod({ bankCode }: PaymentMethodProps) {
   const bankName = BANK_NAMES[bankCode] || bankCode;
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-      <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-        <span className="text-[#F5A623] mr-2">💳</span>
-        <span>Phương thức thanh toán</span>
+    <div className="bg-white rounded-2xl shadow-xl p-6 lg:p-8 border border-gray-100">
+      <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <CreditCardIcon className="w-6 h-6 text-[#F5A623]" />
+        Phương thức thanh toán
       </h3>
 
-      <div className="border-2 border-[#F5A623] rounded-lg p-4 bg-gradient-to-br from-[#FFF8E8] to-white">
-        <div className="flex items-center space-x-3">
+      <div className="relative overflow-hidden rounded-xl border-2 border-[#F5A623] bg-orange-50/50 p-4 transition-all hover:shadow-md cursor-pointer">
+        <div className="flex items-center gap-4">
           {/* Bank Icon */}
-          <div className="w-12 h-12 bg-gradient-to-br from-[#F5A623] to-[#FF8C00] rounded-lg flex items-center justify-center shadow-md">
-            <svg
-              className="w-6 h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
-              />
-            </svg>
+          <div className="w-12 h-12 bg-linear-to-br from-[#F5A623] to-[#FF8C00] rounded-xl flex items-center justify-center shadow-lg shadow-orange-200">
+            <CreditCardIcon className="w-6 h-6 text-white" />
           </div>
 
           {/* Bank Info */}
           <div className="flex-1">
-            <p className="font-bold text-gray-800">Chuyển khoản ngân hàng</p>
-            <p className="text-sm text-gray-600">{bankName}</p>
+            <p className="font-bold text-gray-900 text-lg">Chuyển khoản ngân hàng</p>
+            <p className="text-sm text-gray-600 font-medium">{bankName}</p>
           </div>
 
           {/* Selected Badge */}
-          <div className="w-6 h-6 bg-[#F5A623] rounded-full flex items-center justify-center shadow-md">
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
+          <CheckCircleIcon className="w-8 h-8 text-[#F5A623]" />
         </div>
+        
+        {/* Decorative background element */}
+        <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#F5A623]/10 rounded-full blur-2xl"></div>
       </div>
 
-      <div className="mt-4 bg-gradient-to-r from-[#FFF8E8] to-[#FFE8B8] border border-[#F5A623] rounded-lg p-4">
-        <div className="flex">
-          <svg
-            className="w-5 h-5 text-[#F5A623] mr-2 flex-shrink-0"
-            fill="currentColor"
-            viewBox="0 0 20 20"
-          >
-            <path
-              fillRule="evenodd"
-              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <p className="text-sm text-gray-800 font-medium">
-            Sau khi nhấn &quot;Thanh toán&quot;, bạn sẽ nhận được mã QR để quét và thực hiện thanh toán qua ứng dụng ngân hàng.
-          </p>
-        </div>
+      <div className="mt-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
+        <InformationCircleIcon className="w-6 h-6 text-blue-500 shrink-0" />
+        <p className="text-sm text-blue-800 font-medium leading-relaxed">
+          Sau khi nhấn <span className="font-bold">"Thanh toán"</span>, hệ thống sẽ tạo mã QR. Bạn chỉ cần mở ứng dụng ngân hàng và quét mã để hoàn tất giao dịch.
+        </p>
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PublicOrder } from '@/lib/types/payment.types';
+import { ClipboardDocumentIcon, CheckIcon, ArrowDownTrayIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 interface PaymentInfoProps {
   order: PublicOrder;
@@ -59,17 +60,19 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
   };
 
   const downloadQR = async () => {
-    if (!order.virtual_account?.qr_code) return;
+    const qrCodeUrl = order.payment_info?.qr_code_url || 
+      (order.virtual_account ? `https://img.vietqr.io/image/msb-134199-compact2.jpg?amount=${order.virtual_account.equal_amount}&addInfo=${encodeURIComponent(order.order_code)}` : null);
+
+    if (!qrCodeUrl) return;
 
     try {
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=512x512&data=${encodeURIComponent(order.virtual_account.qr_code)}`;
-      const response = await fetch(qrUrl);
+      const response = await fetch(qrCodeUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `QR-${order.order_code}.png`;
+      link.download = `QR-${order.order_code}.jpg`;
       link.click();
       
       window.URL.revokeObjectURL(url);
@@ -78,178 +81,153 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
     }
   };
 
-  if (!order.virtual_account) {
+  if (!order.virtual_account && !order.payment_info) {
     return (
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div className="text-center">
-          <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
-            Đăng ký thành công!
-          </h2>
-          <p className="text-gray-600 mb-2">
-            Mã đơn hàng: <span className="font-mono font-bold text-[#F5A623]">{order.order_code}</span>
-          </p>
-          <p className="text-gray-500">
-            Thông tin thanh toán sẽ được gửi qua email.
-          </p>
+      <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckIcon className="w-8 h-8 text-green-600" />
         </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Đăng ký thành công!
+        </h2>
+        <p className="text-gray-600 mb-4">
+          Mã đơn hàng: <span className="font-mono font-bold text-[#F5A623]">{order.order_code}</span>
+        </p>
+        <p className="text-gray-500">
+          Thông tin thanh toán sẽ được gửi qua email.
+        </p>
       </div>
     );
   }
 
-  const va = order.virtual_account;
+  const paymentData = order.payment_info ? {
+    bankName: order.payment_info.bank_name,
+    accountName: order.payment_info.account_holder,
+    accountNumber: order.payment_info.account_number,
+    amount: order.payment_info.amount,
+    content: order.payment_info.description,
+    qrCode: order.payment_info.qr_code_url
+  } : order.virtual_account ? {
+    bankName: "MSB - Hàng Hải Việt Nam",
+    accountName: order.virtual_account.name,
+    accountNumber: "134199", // Hardcoded as requested previously for VA flow fallback
+    amount: order.virtual_account.equal_amount,
+    content: order.order_code,
+    qrCode: `https://img.vietqr.io/image/msb-134199-compact2.jpg?amount=${order.virtual_account.equal_amount}&addInfo=${encodeURIComponent(order.order_code)}`
+  } : null;
+
+  if (!paymentData) return null;
 
   return (
-    <div className="space-y-6">
-      {/* Success Header */}
-      <div className="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-100">
-        <div className="text-5xl mb-4">✅</div>
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">
-          Đăng ký thành công!
-        </h1>
-        <p className="text-gray-600">
-          Mã đơn hàng: <span className="font-mono font-bold text-[#F5A623]">{order.order_code}</span>
-        </p>
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+      <div className="bg-[#F5A623] p-4 text-center">
+        <h2 className="text-white font-bold text-lg">THÔNG TIN CHUYỂN KHOẢN</h2>
+        <p className="text-white/90 text-sm">Vui lòng chuyển khoản chính xác số tiền bên dưới</p>
       </div>
 
-      {/* Payment Information Card */}
-      <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-        <div className="bg-gradient-to-r from-[#F5A623] to-[#FF8C00] rounded-lg p-4 mb-6">
-          <h2 className="text-xl font-bold text-center text-white flex items-center justify-center">
-            <span className="mr-2">💳</span>
-            <span>THÔNG TIN THANH TOÁN</span>
-          </h2>
-        </div>
-
-        {/* Bank Info */}
-        <div className="space-y-4 mb-6">
-          <div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b">
-            <span className="font-semibold text-gray-700 mb-1 sm:mb-0">🏦 Ngân hàng:</span>
-            <span className="text-gray-900">MSB - Ngân hàng TMCP Hàng Hải Việt Nam</span>
+      <div className="p-6 lg:p-8">
+        {/* Timer */}
+        {timeRemaining && (
+          <div className="flex items-center justify-center gap-2 text-orange-600 bg-orange-50 py-2 px-4 rounded-lg mb-8 w-fit mx-auto">
+            <ClockIcon className="w-5 h-5" />
+            <span className="font-medium">Hết hạn trong: {timeRemaining}</span>
           </div>
+        )}
 
-          <div className="flex flex-col sm:flex-row sm:justify-between py-3 border-b">
-            <span className="font-semibold text-gray-700 mb-1 sm:mb-0">👤 Chủ tài khoản:</span>
-            <span className="text-gray-900">{va.name}</span>
-          </div>
-
-          <div className="flex flex-col py-3 border-b">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold text-gray-700">🎫 Mã thanh toán:</span>
-              <button
-                onClick={() => copyToClipboard(order.order_code, 'order_code')}
-                className="px-3 py-1 bg-[#FFF8E8] hover:bg-[#F5A623] hover:text-white border border-[#F5A623] text-[#F5A623] rounded-md text-sm transition-all font-medium"
-              >
-                {copySuccess === 'order_code' ? '✓ Đã copy' : '📋 Copy'}
-              </button>
-            </div>
-            <span className="text-xl font-bold text-gray-900 font-mono">
-              {order.order_code}
-            </span>
-          </div>
-
-          <div className="flex flex-col py-3 border-b">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold text-gray-700">💰 Số tiền:</span>
-              <button
-                onClick={() => copyToClipboard(va.equal_amount.toString(), 'amount')}
-                className="px-3 py-1 bg-[#FFF8E8] hover:bg-[#F5A623] hover:text-white border border-[#F5A623] text-[#F5A623] rounded-md text-sm transition-all font-medium"
-              >
-                {copySuccess === 'amount' ? '✓ Đã copy' : '📋 Copy'}
-              </button>
-            </div>
-            <span className="text-2xl font-bold text-[#F5A623]">
-              {formatCurrency(va.equal_amount)}
-            </span>
-          </div>
-
-          <div className="flex flex-col py-3 border-b">
-            <div className="flex justify-between items-center mb-2">
-              <span className="font-semibold text-gray-700">🔢 Số tài khoản:</span>
-              <button
-                onClick={() => copyToClipboard(va.account_number, 'account')}
-                className="px-3 py-1 bg-[#FFF8E8] hover:bg-[#F5A623] hover:text-white border border-[#F5A623] text-[#F5A623] rounded-md text-sm transition-all font-medium"
-              >
-                {copySuccess === 'account' ? '✓ Đã copy' : '📋 Copy'}
-              </button>
-            </div>
-            <span className="text-xl font-bold text-gray-900 font-mono">
-              {va.account_number}
-            </span>
-          </div>
-        </div>
-
-        {/* QR Code Section */}
-        <div className="border-t border-b py-6 my-6">
-          <h3 className="text-lg font-semibold text-center text-gray-800 mb-4">
-            📱 Quét mã QR để thanh toán nhanh
-          </h3>
-          <div className="flex justify-center mb-4">
-            <div className="border-4 border-[#F5A623] rounded-xl p-3 bg-white shadow-lg">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* QR Code */}
+          <div className="flex flex-col items-center">
+            <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100 mb-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(va.qr_code)}`}
+                src={paymentData.qrCode}
                 alt="QR Code thanh toán"
-                className="w-64 h-64"
+                className="w-48 h-48 object-contain"
               />
             </div>
-          </div>
-          <div className="bg-gray-50 rounded-lg p-3 mb-4">
-            <p className="text-xs text-gray-600 text-center whitespace-pre-wrap break-all">
-              {va.qr_code}
-            </p>
-          </div>
-          <div className="text-center">
             <button
               onClick={downloadQR}
-              className="px-6 py-3 bg-gradient-to-r from-[#F5A623] to-[#FF8C00] hover:from-[#E09200] hover:to-[#F57C00] text-white font-bold rounded-lg transition-all shadow-md"
+              className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#F5A623] transition-colors"
             >
-              ⬇️ Tải mã QR
+              <ArrowDownTrayIcon className="w-4 h-4" />
+              Tải mã QR
             </button>
+          </div>
+
+          {/* Bank Details */}
+          <div className="space-y-5">
+            <div>
+              <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Ngân hàng</label>
+              <p className="text-gray-900 font-medium text-lg">{paymentData.bankName}</p>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Chủ tài khoản</label>
+              <p className="text-gray-900 font-medium text-lg">{paymentData.accountName}</p>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Số tài khoản</label>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-2xl font-bold text-[#F5A623] font-mono tracking-wide">{paymentData.accountNumber}</p>
+                <button
+                  onClick={() => copyToClipboard(paymentData.accountNumber, 'account')}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-[#F5A623]"
+                  title="Sao chép số tài khoản"
+                >
+                  {copySuccess === 'account' ? (
+                    <CheckIcon className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <ClipboardDocumentIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Số tiền</label>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-2xl font-bold text-[#F5A623]">{formatCurrency(paymentData.amount)}</p>
+                <button
+                  onClick={() => copyToClipboard(paymentData.amount.toString(), 'amount')}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-[#F5A623]"
+                  title="Sao chép số tiền"
+                >
+                  {copySuccess === 'amount' ? (
+                    <CheckIcon className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <ClipboardDocumentIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Nội dung chuyển khoản</label>
+              <div className="flex items-center gap-2 mt-1 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <p className="text-gray-900 font-mono font-medium flex-1">{paymentData.content}</p>
+                <button
+                  onClick={() => copyToClipboard(paymentData.content, 'content')}
+                  className="text-gray-400 hover:text-[#F5A623] transition-colors"
+                  title="Sao chép nội dung"
+                >
+                  {copySuccess === 'content' ? (
+                    <CheckIcon className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <ClipboardDocumentIcon className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-red-500 mt-1">* Vui lòng nhập chính xác nội dung chuyển khoản</p>
+            </div>
           </div>
         </div>
 
-        {/* Timer Section */}
-        <div className="bg-gradient-to-r from-[#FFF8E8] to-[#FFE8B8] border border-[#F5A623] rounded-lg p-4 mb-6">
-          <p className="text-center text-gray-800">
-            ⏰ Vui lòng thanh toán trong:{' '}
-            <span className="font-bold text-[#F5A623]">{timeRemaining}</span>
-          </p>
-        </div>
-
-        {/* Notes Section */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-gray-800 mb-3">📌 Lưu ý:</h3>
-          <ul className="space-y-2 text-gray-700">
-            <li className="flex items-start">
-              <span className="text-[#F5A623] mr-2">•</span>
-              <span>
-                Chuyển khoản <strong>ĐÚNG số tiền</strong>: {formatCurrency(va.equal_amount)}
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="text-[#F5A623] mr-2">•</span>
-              <span>
-                Nội dung: <strong>{va.detail1}</strong>
-              </span>
-            </li>
-            <li className="flex items-start">
-              <span className="text-[#F5A623] mr-2">•</span>
-              <span>
-                Sau khi chuyển khoản, đơn hàng tự động cập nhật trong vài phút
-              </span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <button className="px-4 py-3 bg-white border-2 border-[#F5A623] text-[#F5A623] rounded-lg hover:bg-[#FFF8E8] transition-colors font-bold">
-            📖 Hướng dẫn thanh toán
-          </button>
-          <button className="px-4 py-3 bg-gradient-to-r from-[#F5A623] to-[#FF8C00] text-white rounded-lg hover:from-[#E09200] hover:to-[#F57C00] transition-all font-bold shadow-md">
-            🔍 Kiểm tra trạng thái
-          </button>
+        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+          <div className="flex items-center justify-center gap-2 text-gray-500 text-sm animate-pulse">
+            <div className="w-2 h-2 bg-[#F5A623] rounded-full"></div>
+            Đang chờ thanh toán... Hệ thống sẽ tự động xác nhận sau ít phút
+          </div>
         </div>
       </div>
     </div>

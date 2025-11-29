@@ -1,6 +1,7 @@
 'use client';
 
 import { Campaign } from '@/lib/types/payment.types';
+import { TagIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 
 interface CampaignInfoProps {
   campaign: Campaign;
@@ -24,7 +25,6 @@ export default function CampaignInfo({
     return new Intl.NumberFormat('vi-VN').format(amount) + ' ₫';
   };
 
-  // Lấy giá gốc dựa trên khuyến mãi được chọn
   const getOriginalPrice = () => {
     if (selectedPromotion === 'km01' && campaign.km01_price) {
       return campaign.original_price || 0;
@@ -42,70 +42,88 @@ export default function CampaignInfo({
   const promotionName = selectedPromotion.toUpperCase();
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden sticky top-4 border border-gray-100">
-      <div className="bg-gradient-to-r from-[#F5A623] to-[#FF8C00] p-4">
-        <h3 className="text-white font-bold text-lg flex items-center">
-          <span className="mr-2">👑</span>
-          <span>THÔNG TIN KHÓA HỌC</span>
-        </h3>
-      </div>
-      <div className="p-6">
-        {/* Campaign Name */}
-        <div className="mb-4">
-          <div className="text-sm font-semibold text-[#F5A623] mb-1">Khóa học:</div>
-          <h2 className="text-2xl font-bold text-gray-800">
-            📚 {campaign.name}
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden sticky top-8">
+      {/* Header Image/Gradient */}
+      <div className="h-32 bg-gradient-to-br from-gray-900 to-gray-800 relative p-6 flex flex-col justify-end">
+        <div className="absolute top-0 right-0 p-4 opacity-10">
+          <TagIcon className="w-24 h-24 text-white" />
+        </div>
+        <div className="relative z-10">
+          <span className="inline-block px-3 py-1 bg-[#F5A623] text-white text-xs font-bold rounded-full mb-2">
+            KHÓA HỌC
+          </span>
+          <h2 className="text-xl font-bold text-white leading-tight">
+            {campaign.name}
           </h2>
         </div>
+      </div>
 
-        {/* Campaign Description */}
+      <div className="p-6">
+        {/* Description */}
         {campaign.description && (
-          <div className="mb-4 pb-4 border-b border-gray-200">
+          <div className="mb-6 pb-6 border-b border-gray-100">
             <p className="text-gray-600 text-sm leading-relaxed">
               {campaign.description}
             </p>
           </div>
         )}
 
-        {/* Pricing Information */}
-        <div className="border-t border-gray-200 pt-4 space-y-3">
-          {/* Original Price */}
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">Giá gốc:</span>
-            <span className="text-gray-400 line-through">
+        {/* Pricing Details */}
+        <div className="space-y-4">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-gray-500">Giá gốc</span>
+            <span className="text-gray-400 line-through decoration-gray-400">
               {formatCurrency(originalPrice)}
             </span>
           </div>
 
-          {/* Promotion */}
           {promotionAmount > 0 && (
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Khuyến mãi ({promotionName}):</span>
-              <span className="text-[#F5A623] font-bold">
+            <div className="flex justify-between items-center text-sm bg-green-50 p-3 rounded-lg border border-green-100">
+              <span className="text-green-700 font-medium flex items-center gap-1">
+                <TagIcon className="w-4 h-4" />
+                Khuyến mãi ({promotionName})
+              </span>
+              <span className="text-green-700 font-bold">
                 -{formatCurrency(promotionAmount)}
               </span>
             </div>
           )}
 
-          {/* Deposit Badge (if applicable) */}
           {isDeposit && (
-            <div className="bg-gradient-to-r from-[#FFF8E8] to-[#FFE8B8] border border-[#F5A623] rounded-lg p-3">
-              <div className="flex items-center justify-center">
-                <span className="text-[#F5A623] font-bold text-sm">
-                  💰 Thanh toán đặt cọc
-                </span>
-              </div>
+            <div className="flex justify-between items-center text-sm bg-orange-50 p-3 rounded-lg border border-orange-100">
+              <span className="text-orange-700 font-medium">Đặt cọc trước</span>
+              <span className="text-orange-700 font-bold">
+                {formatCurrency(depositAmount)}
+              </span>
             </div>
           )}
 
-          {/* Final Amount */}
-          <div className="flex justify-between items-center pt-3 border-t-2 border-[#F5A623]">
-            <span className="text-lg font-semibold text-gray-800">
-              {isDeposit ? 'Số tiền đặt cọc:' : 'Tổng thanh toán:'}
-            </span>
-            <span className="text-2xl font-bold text-[#F5A623]">
-              {formatCurrency(finalAmount)}
-            </span>
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex justify-between items-end">
+              <span className="text-gray-600 font-medium">Tổng thanh toán</span>
+              <div className="text-right">
+                <span className="block text-3xl font-bold text-[#F5A623]">
+                  {formatCurrency(finalAmount)}
+                </span>
+                {isDeposit && (
+                  <span className="text-xs text-gray-500 mt-1 block">
+                    (Số tiền còn lại sẽ thanh toán sau)
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Trust Badges */}
+        <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 gap-4">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <CurrencyDollarIcon className="w-4 h-4 text-[#F5A623]" />
+            <span>Hoàn tiền trong 7 ngày</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <TagIcon className="w-4 h-4 text-[#F5A623]" />
+            <span>Ưu đãi có hạn</span>
           </div>
         </div>
       </div>

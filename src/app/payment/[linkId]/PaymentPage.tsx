@@ -4,22 +4,14 @@ import { useState, useEffect } from 'react';
 import { paymentService } from '@/lib/services/payment.service';
 import { PaymentLinkData, PublicOrder } from '@/lib/types/payment.types';
 import CampaignInfo from './components/CampaignInfo';
-import CustomerForm from './components/CustomerForm';
-import PaymentMethod from './components/PaymentMethod';
+import CustomerForm, { CustomerFormData } from './components/CustomerForm';
 import PaymentInfo from './components/PaymentInfo';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { ExclamationTriangleIcon, CheckCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
 interface PaymentPageProps {
   linkId: string;
-}
-
-interface CustomerFormData {
-  fullName: string;
-  phoneNumber: string;
-  email: string;
-  address: string;
-  notes?: string;
 }
 
 export default function PaymentPage({ linkId }: PaymentPageProps) {
@@ -30,7 +22,8 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
     fullName: '',
     phoneNumber: '',
     email: '',
-    address: '',
+    addressDetail: '',
+    isShippingSameAsBilling: true,
   });
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -50,12 +43,11 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
         if (updatedOrder.payment_status === 'paid') {
           setOrder(updatedOrder);
           clearInterval(interval);
-          alert('Thanh toán thành công! Bạn sẽ nhận được email xác nhận trong giây lát.');
         }
       } catch (error) {
         console.error('Error checking payment status:', error);
       }
-    }, 5000); // Check every 5 seconds
+    }, 3000); // Check every 3 seconds
 
     return () => clearInterval(interval);
   }, [order]);
@@ -65,10 +57,8 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       setLoading(true);
       setError(null);
       
-      // Get payment link data which includes campaign information
       const paymentLink = await paymentService.getPaymentLink(linkId);
       
-      // Check if payment link is expired
       if (paymentLink.is_expired) {
         setError('Link thanh toán đã hết hạn');
         return;
@@ -83,8 +73,8 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       setPaymentLinkData(paymentLink);
     } catch (err: unknown) {
       console.error('Error loading payment data:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Không thể tải thông tin thanh toán. Vui lòng thử lại sau.';
-      setError(errorMessage);
+      // If error is 404-like, we can show a specific message
+      setError('Link thanh toán không tồn tại hoặc đã hết hạn');
     } finally {
       setLoading(false);
     }
@@ -95,26 +85,46 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
     
     if (!paymentLinkData) return;
 
-    // Validate required fields
     if (!customerInfo.fullName || !customerInfo.phoneNumber) {
       alert('Vui lòng điền đầy đủ thông tin bắt buộc (Họ tên và Số điện thoại)');
       return;
+    }
+
+    if (!customerInfo.province || !customerInfo.ward || !customerInfo.addressDetail) {
+      alert('Vui lòng điền đầy đủ địa chỉ xuất hoá đơn');
+      return;
+    }
+
+    if (!customerInfo.isShippingSameAsBilling) {
+      if (!customerInfo.shippingProvince || !customerInfo.shippingWard || !customerInfo.shippingAddressDetail) {
+        alert('Vui lòng điền đầy đủ địa chỉ nhận sách');
+        return;
+      }
+    }
+
+    // Construct addresses
+    const billingAddress = `${customerInfo.addressDetail}, ${customerInfo.ward.name}, ${customerInfo.province.name}`;
+    
+    let finalNotes = customerInfo.notes || '';
+    if (!customerInfo.isShippingSameAsBilling && customerInfo.shippingProvince && customerInfo.shippingWard) {
+      const shippingAddress = `${customerInfo.shippingAddressDetail || ''}, ${customerInfo.shippingWard.name}, ${customerInfo.shippingProvince.name}`;
+      finalNotes += `\n[Địa chỉ nhận sách: ${shippingAddress}]`;
     }
 
     try {
       setIsProcessing(true);
       setError(null);
 
-      // Create order with payment link token
-      // Backend will automatically create Virtual Account and return it
       const newOrder = await paymentService.createOrder( {
         campaign_id: paymentLinkData.campaign.id,
         payment_link_token: linkId,
         customer_name: customerInfo.fullName,
         customer_phone: customerInfo.phoneNumber,
         customer_email: customerInfo.email || undefined,
-        customer_address: customerInfo.address || undefined,
-        notes: customerInfo.notes || undefined,
+        customer_address: billingAddress,
+        notes: finalNotes || undefined,
+        payment_channel: 'manual_bank_transfer',
+        promotion_code: paymentLinkData.selected_promotion ? paymentLinkData.selected_promotion.toUpperCase() : undefined,
       });
       
       setOrder(newOrder);
@@ -129,12 +139,12 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
+        <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F5A623] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Đang tải thông tin...</p>
+            <p className="mt-4 text-gray-600 font-medium">Đang tải thông tin thanh toán...</p>
           </div>
         </div>
         <Footer />
@@ -144,13 +154,18 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
 
   if (error && !paymentLinkData) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
-            <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <h2 className="text-xl font-semibold text-gray-800 mb-2">Có lỗi xảy ra</h2>
-            <p className="text-gray-600">{error}</p>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-gray-100">
+            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ExclamationTriangleIcon className="w-10 h-10 text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Không tìm thấy trang</h2>
+            <p className="text-gray-600 mb-8">{error}</p>
+            <a href="/" className="inline-block bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors">
+              Về trang chủ
+            </a>
           </div>
         </div>
         <Footer />
@@ -160,23 +175,33 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
 
   if (order && order.payment_status === 'paid') {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
-          <div className="bg-white p-8 rounded-xl shadow-lg max-w-md text-center border border-gray-100">
-            <div className="text-5xl mb-4">🎉</div>
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-gray-100">
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircleIcon className="w-10 h-10 text-green-500" />
+            </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">Thanh toán thành công!</h2>
             <p className="text-gray-600 mb-6">
-              Cảm ơn bạn đã thanh toán. Chúng tôi đã gửi email xác nhận đến địa chỉ email của bạn.
+              Cảm ơn bạn đã thanh toán. Thông tin đơn hàng đã được gửi đến email của bạn.
             </p>
-            <div className="bg-gradient-to-br from-[#FFF8E8] to-[#FFE8B8] rounded-lg p-4 space-y-2">
-              <p className="text-sm text-gray-600">
-                Mã đơn hàng: <span className="font-mono font-bold text-[#F5A623]">{order.order_code}</span>
-              </p>
-              <p className="text-sm text-gray-600">
-                Số tiền: <span className="font-bold text-[#F5A623]">{new Intl.NumberFormat('vi-VN').format(order.total_amount)} VND</span>
-              </p>
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-6 text-left">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Mã đơn hàng</span>
+                <span className="font-mono font-bold text-gray-900">{order.order_code}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Số tiền</span>
+                <span className="font-bold text-[#F5A623]">{new Intl.NumberFormat('vi-VN').format(order.total_amount)} ₫</span>
+              </div>
             </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-[#F5A623] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#E09612] transition-colors shadow-lg shadow-orange-200"
+            >
+              Hoàn tất
+            </button>
           </div>
         </div>
         <Footer />
@@ -185,21 +210,25 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-[#FFF8E8]">
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       <Header />
-      <div className="flex-1 py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-gray-800 mb-2">
-              <span className="text-[#F5A623]">👑</span> EMPIRE EDUCATION
+      
+      <main className="flex-1 py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-10">
+            <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+              Thanh toán đơn hàng
             </h1>
-            <p className="text-lg text-gray-600">Trang thanh toán</p>
+            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm">
+              <ShieldCheckIcon className="w-5 h-5 text-green-500" />
+              <span>Thông tin được bảo mật an toàn 100%</span>
+            </div>
           </div>
 
           {paymentLinkData && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column - Campaign Information (1/3 width) */}
-              <div className="lg:col-span-1">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Left Column: Order Summary */}
+              <div className="lg:col-span-5 space-y-6">
                 <CampaignInfo 
                   campaign={paymentLinkData.campaign}
                   selectedPromotion={paymentLinkData.selected_promotion}
@@ -208,54 +237,61 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
                   depositAmount={paymentLinkData.deposit_amount}
                   finalAmount={paymentLinkData.final_amount}
                 />
+                
+                {/* Security Note for Desktop */}
+                <div className="hidden lg:block bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <ShieldCheckIcon className="w-5 h-5 text-[#F5A623]" />
+                    Cam kết bảo mật
+                  </h3>
+                  <ul className="space-y-3 text-sm text-gray-600">
+                    <li className="flex items-start gap-2">
+                      <CheckCircleIcon className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>Thông tin thanh toán được mã hóa an toàn</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircleIcon className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>Xác nhận thanh toán tự động 24/7</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircleIcon className="w-5 h-5 text-green-500 shrink-0" />
+                      <span>Hỗ trợ hoàn tiền nếu có lỗi giao dịch</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
 
-              {/* Right Column - Payment Form or Payment Info (2/3 width) */}
-              <div className="lg:col-span-2">
+              {/* Right Column: Payment Form / Info */}
+              <div className="lg:col-span-7">
                 {!order ? (
-                  <form onSubmit={handleSubmitPayment} className="space-y-6">
-                    {/* Customer Information Form */}
-                    <CustomerForm
-                      customerInfo={customerInfo}
-                      onChange={setCustomerInfo}
-                    />
-
-                    {/* Payment Method */}
-                    <PaymentMethod bankCode='MSB' />
-
-                    {error && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-red-600 text-sm">{error}</p>
+                  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                    <div className="p-6 lg:p-8">
+                      <CustomerForm 
+                        customerInfo={customerInfo}
+                        onChange={setCustomerInfo}
+                      />
+                      
+                      <div className="mt-8 pt-6 border-t border-gray-100">
+                        <button
+                          onClick={handleSubmitPayment}
+                          disabled={isProcessing}
+                          className="w-full bg-[#F5A623] hover:bg-[#E09612] text-white font-bold py-4 px-6 rounded-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-orange-100 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              <span>Đang xử lý...</span>
+                            </>
+                          ) : (
+                            <span>Tiến hành thanh toán</span>
+                          )}
+                        </button>
+                        <p className="text-center text-xs text-gray-400 mt-4">
+                          Bằng việc thanh toán, bạn đồng ý với điều khoản dịch vụ của chúng tôi
+                        </p>
                       </div>
-                    )}
-
-                    {/* Submit Button */}
-                    <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-                      <button
-                        type="submit"
-                        disabled={isProcessing}
-                        className="w-full bg-gradient-to-r from-[#F5A623] to-[#FF8C00] hover:from-[#E09200] hover:to-[#F57C00] text-white font-bold py-4 px-6 rounded-lg transition-all transform hover:scale-[1.02] disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none shadow-md"
-                      >
-                        {isProcessing ? (
-                          <span className="flex items-center justify-center">
-                            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang xử lý...
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center">
-                            <span>👑</span>
-                            <span className="ml-2">ĐĂNG KÝ VÀ THANH TOÁN</span>
-                          </span>
-                        )}
-                      </button>
-                      <p className="text-center text-sm text-gray-500 mt-3">
-                        Bằng việc đăng ký, bạn đồng ý với điều khoản sử dụng
-                      </p>
                     </div>
-                  </form>
+                  </div>
                 ) : (
                   <PaymentInfo order={order} />
                 )}
@@ -263,8 +299,9 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
             </div>
           )}
         </div>
-      </div>
+      </main>
       <Footer />
     </div>
   );
 }
+

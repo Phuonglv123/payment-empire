@@ -53,6 +53,8 @@ export interface CreateOrderRequest {
   student_group?: string;
   notes?: string;
   campaign_id: string;
+  payment_channel?: string;
+  promotion_code?: string;
 }
 
 // Virtual Account info returned from backend
@@ -78,6 +80,16 @@ export interface VirtualAccount {
   updated_at: string;
 }
 
+export interface ManualPaymentInfo {
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+  bin: string;
+  amount: number;
+  description: string;
+  qr_code_url: string;
+}
+
 // Public Order response from backend
 export interface PublicOrder {
   id: string;
@@ -99,6 +111,8 @@ export interface PublicOrder {
   campaign: Campaign;
   notes?: string;
   virtual_account?: VirtualAccount;
+  payment_info?: ManualPaymentInfo;
+  payment_channel?: string;
   created_at: string;
   updated_at: string;
 }
