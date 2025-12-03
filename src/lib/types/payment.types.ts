@@ -50,6 +50,8 @@ export interface CreateOrderRequest {
   customer_phone: string;
   customer_email?: string;
   customer_address?: string;
+  address_level_1?: string; // Invoice Address (JSON)
+  address_level_2?: string; // Shipping Address (JSON)
   student_group?: string;
   notes?: string;
   campaign_id: string;

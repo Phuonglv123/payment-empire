@@ -407,3 +407,7 @@ For issues or questions about the payment implementation:
   - Webhook integration
   - User creation and group assignment
   - Email confirmation
+
+
+cần phải điều chỉnh lại logic của total amount để thanh toán: 
+- Nếu như là loại đơn hàng đặt 

@@ -90,26 +90,36 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       return;
     }
 
-    if (!customerInfo.province || !customerInfo.district || !customerInfo.ward || !customerInfo.addressDetail) {
+    if (!customerInfo.province || !customerInfo.ward || !customerInfo.addressDetail) {
       alert('Vui lòng điền đầy đủ địa chỉ xuất hoá đơn');
       return;
     }
 
-    if (!customerInfo.isShippingSameAsBilling) {
-      if (!customerInfo.shippingProvince || !customerInfo.shippingDistrict || !customerInfo.shippingWard || !customerInfo.shippingAddressDetail) {
-        alert('Vui lòng điền đầy đủ địa chỉ nhận sách');
-        return;
-      }
+    if (!customerInfo.shippingProvince || !customerInfo.shippingDistrict || !customerInfo.shippingWard || !customerInfo.shippingAddressDetail) {
+      alert('Vui lòng điền đầy đủ địa chỉ nhận sách');
+      return;
     }
 
     // Construct addresses
-    const billingAddress = `${customerInfo.addressDetail}, ${customerInfo.ward.name}, ${customerInfo.district.name}, ${customerInfo.province.name}`;
+    const billingAddress = `${customerInfo.addressDetail}, ${customerInfo.ward.name}, ${customerInfo.province.name}`;
     
+    // Create JSON objects for addresses
+    const invoiceAddressObj = {
+      province: customerInfo.province.name,
+      ward: customerInfo.ward.name,
+      addressDetail: customerInfo.addressDetail
+    };
+
+    const shippingAddressObj = {
+      province: customerInfo.shippingProvince.name,
+      district: customerInfo.shippingDistrict.name,
+      ward: customerInfo.shippingWard.name,
+      addressDetail: customerInfo.shippingAddressDetail
+    };
+
     let finalNotes = customerInfo.notes || '';
-    if (!customerInfo.isShippingSameAsBilling && customerInfo.shippingProvince && customerInfo.shippingDistrict && customerInfo.shippingWard) {
-      const shippingAddress = `${customerInfo.shippingAddressDetail || ''}, ${customerInfo.shippingWard.name}, ${customerInfo.shippingDistrict.name}, ${customerInfo.shippingProvince.name}`;
-      finalNotes += `\n[Địa chỉ nhận sách: ${shippingAddress}]`;
-    }
+    const shippingAddress = `${customerInfo.shippingAddressDetail}, ${customerInfo.shippingWard.name}, ${customerInfo.shippingDistrict.name}, ${customerInfo.shippingProvince.name}`;
+    finalNotes += `\n[Địa chỉ nhận sách: ${shippingAddress}]`;
 
     try {
       setIsProcessing(true);
@@ -122,6 +132,8 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
         customer_phone: customerInfo.phoneNumber,
         customer_email: customerInfo.email || undefined,
         customer_address: billingAddress,
+        address_level_1: JSON.stringify(invoiceAddressObj),
+        address_level_2: JSON.stringify(shippingAddressObj),
         notes: finalNotes || undefined,
         payment_channel: 'manual_bank_transfer',
         promotion_code: paymentLinkData.selected_promotion ? paymentLinkData.selected_promotion.toUpperCase() : undefined,

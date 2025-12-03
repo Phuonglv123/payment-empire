@@ -47,98 +47,85 @@ interface CustomerFormProps {
 }
 
 export default function CustomerForm({ customerInfo, onChange }: CustomerFormProps) {
-  const [provinces, setProvinces] = useState<Province[]>([]);
+  // Invoice Address State (2 levels)
+  const [invoiceProvinces, setInvoiceProvinces] = useState<Province[]>([]);
+  const [invoiceWards, setInvoiceWards] = useState<Ward[]>([]);
   
-  const [districts, setDistricts] = useState<District[]>([]);
-  const [wards, setWards] = useState<Ward[]>([]);
-  
+  // Shipping Address State (3 levels)
+  const [shippingProvinces, setShippingProvinces] = useState<Province[]>([]);
   const [shippingDistricts, setShippingDistricts] = useState<District[]>([]);
   const [shippingWards, setShippingWards] = useState<Ward[]>([]);
 
-  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingInvoiceProvinces, setLoadingInvoiceProvinces] = useState(false);
+  const [loadingInvoiceWards, setLoadingInvoiceWards] = useState(false);
   
-  const [loadingDistricts, setLoadingDistricts] = useState(false);
-  const [loadingWards, setLoadingWards] = useState(false);
-  
+  const [loadingShippingProvinces, setLoadingShippingProvinces] = useState(false);
   const [loadingShippingDistricts, setLoadingShippingDistricts] = useState(false);
   const [loadingShippingWards, setLoadingShippingWards] = useState(false);
 
-  // Fetch Provinces
+  // Fetch Invoice Provinces (Old API)
   useEffect(() => {
-    const fetchProvinces = async () => {
+    const fetchInvoiceProvinces = async () => {
       try {
-        setLoadingProvinces(true);
+        setLoadingInvoiceProvinces(true);
+        const response = await axios.get('https://api-geo-three.vercel.app/api/provinces');
+        if (response.data && response.data.data) {
+          setInvoiceProvinces(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching invoice provinces:', error);
+      } finally {
+        setLoadingInvoiceProvinces(false);
+      }
+    };
+    fetchInvoiceProvinces();
+  }, []);
+
+  // Fetch Shipping Provinces (New API)
+  useEffect(() => {
+    const fetchShippingProvinces = async () => {
+      try {
+        setLoadingShippingProvinces(true);
         const response = await axios.get('https://provinces.open-api.vn/api/?depth=1');
         if (response.data) {
           const mappedProvinces = response.data.map((p: any) => ({
             code: String(p.code),
             name: p.name
           }));
-          setProvinces(mappedProvinces);
+          setShippingProvinces(mappedProvinces);
         }
       } catch (error) {
-        console.error('Error fetching provinces:', error);
+        console.error('Error fetching shipping provinces:', error);
       } finally {
-        setLoadingProvinces(false);
+        setLoadingShippingProvinces(false);
       }
     };
-    fetchProvinces();
+    fetchShippingProvinces();
   }, []);
 
-  // Fetch Districts for Invoice Address
+  // Fetch Invoice Wards (Old API)
   useEffect(() => {
-    const fetchDistricts = async () => {
+    const fetchInvoiceWards = async () => {
       if (!customerInfo.province?.code) {
-        setDistricts([]);
-        setWards([]);
+        setInvoiceWards([]);
         return;
       }
       try {
-        setLoadingDistricts(true);
-        const response = await axios.get(`https://provinces.open-api.vn/api/p/${customerInfo.province.code}?depth=2`);
-        if (response.data && response.data.districts) {
-           const mappedDistricts = response.data.districts.map((d: any) => ({
-            code: String(d.code),
-            name: d.name
-          }));
-          setDistricts(mappedDistricts);
+        setLoadingInvoiceWards(true);
+        const response = await axios.get(`https://api-geo.galaxyedu.io/api/provinces/${customerInfo.province.code}`);
+        if (response.data && response.data.data && response.data.data.wards) {
+          setInvoiceWards(response.data.data.wards);
         }
       } catch (error) {
-        console.error('Error fetching districts:', error);
+        console.error('Error fetching invoice wards:', error);
       } finally {
-        setLoadingDistricts(false);
+        setLoadingInvoiceWards(false);
       }
     };
-    fetchDistricts();
+    fetchInvoiceWards();
   }, [customerInfo.province?.code]);
 
-  // Fetch Wards for Invoice Address
-  useEffect(() => {
-    const fetchWards = async () => {
-      if (!customerInfo.district?.code) {
-        setWards([]);
-        return;
-      }
-      try {
-        setLoadingWards(true);
-        const response = await axios.get(`https://provinces.open-api.vn/api/d/${customerInfo.district.code}?depth=2`);
-        if (response.data && response.data.wards) {
-           const mappedWards = response.data.wards.map((w: any) => ({
-            code: String(w.code),
-            name: w.name
-          }));
-          setWards(mappedWards);
-        }
-      } catch (error) {
-        console.error('Error fetching wards:', error);
-      } finally {
-        setLoadingWards(false);
-      }
-    };
-    fetchWards();
-  }, [customerInfo.district?.code]);
-
-  // Fetch Districts for Shipping Address
+  // Fetch Shipping Districts (New API)
   useEffect(() => {
     const fetchShippingDistricts = async () => {
       if (!customerInfo.shippingProvince?.code) {
@@ -165,7 +152,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
     fetchShippingDistricts();
   }, [customerInfo.shippingProvince?.code]);
 
-  // Fetch Wards for Shipping Address
+  // Fetch Shipping Wards (New API)
   useEffect(() => {
     const fetchShippingWards = async () => {
       if (!customerInfo.shippingDistrict?.code) {
@@ -198,58 +185,48 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
     });
   };
 
-  const handleProvinceChange = (provinceCode: string, isShipping: boolean = false) => {
-    const province = provinces.find(p => p.code === provinceCode);
-    
-    if (isShipping) {
-      onChange({
-        ...customerInfo,
-        shippingProvince: province,
-        shippingDistrict: undefined,
-        shippingWard: undefined,
-      });
-    } else {
-      onChange({
-        ...customerInfo,
-        province: province,
-        district: undefined,
-        ward: undefined,
-      });
-    }
+  const handleInvoiceProvinceChange = (provinceCode: string) => {
+    const province = invoiceProvinces.find(p => p.code === provinceCode);
+    onChange({
+      ...customerInfo,
+      province: province,
+      ward: undefined, // Reset ward
+    });
   };
 
-  const handleDistrictChange = (districtCode: string, isShipping: boolean = false) => {
-    if (isShipping) {
-      const district = shippingDistricts.find(d => d.code === districtCode);
-      onChange({
-        ...customerInfo,
-        shippingDistrict: district,
-        shippingWard: undefined,
-      });
-    } else {
-      const district = districts.find(d => d.code === districtCode);
-      onChange({
-        ...customerInfo,
-        district: district,
-        ward: undefined,
-      });
-    }
+  const handleInvoiceWardChange = (wardCode: string) => {
+    const ward = invoiceWards.find(w => w.code === wardCode);
+    onChange({
+      ...customerInfo,
+      ward: ward,
+    });
   };
 
-  const handleWardChange = (wardCode: string, isShipping: boolean = false) => {
-    if (isShipping) {
-      const ward = shippingWards.find(w => w.code === wardCode);
-      onChange({
-        ...customerInfo,
-        shippingWard: ward,
-      });
-    } else {
-      const ward = wards.find(w => w.code === wardCode);
-      onChange({
-        ...customerInfo,
-        ward: ward,
-      });
-    }
+  const handleShippingProvinceChange = (provinceCode: string) => {
+    const province = shippingProvinces.find(p => p.code === provinceCode);
+    onChange({
+      ...customerInfo,
+      shippingProvince: province,
+      shippingDistrict: undefined,
+      shippingWard: undefined,
+    });
+  };
+
+  const handleShippingDistrictChange = (districtCode: string) => {
+    const district = shippingDistricts.find(d => d.code === districtCode);
+    onChange({
+      ...customerInfo,
+      shippingDistrict: district,
+      shippingWard: undefined,
+    });
+  };
+
+  const handleShippingWardChange = (wardCode: string) => {
+    const ward = shippingWards.find(w => w.code === wardCode);
+    onChange({
+      ...customerInfo,
+      shippingWard: ward,
+    });
   };
 
   return (
@@ -340,7 +317,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
           </div>
         </div>
 
-        {/* Invoice Address Section */}
+        {/* Invoice Address Section (2 Levels) */}
         <div className="col-span-2 border-t border-gray-100 pt-4">
           <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <MapPinIcon className="w-5 h-5 text-[#F5A623]" />
@@ -354,26 +331,11 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
                 Tỉnh / Thành phố <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
-                options={provinces}
+                options={invoiceProvinces}
                 value={customerInfo.province?.code}
-                onChange={(val) => handleProvinceChange(val, false)}
+                onChange={handleInvoiceProvinceChange}
                 placeholder="Chọn Tỉnh / Thành phố"
-                loading={loadingProvinces}
-              />
-            </div>
-
-            {/* District */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Quận / Huyện <span className="text-red-500">*</span>
-              </label>
-              <SearchableSelect
-                options={districts}
-                value={customerInfo.district?.code}
-                onChange={(val) => handleDistrictChange(val, false)}
-                placeholder={loadingDistricts ? "Đang tải..." : "Chọn Quận / Huyện"}
-                disabled={!customerInfo.province || loadingDistricts}
-                loading={loadingDistricts}
+                loading={loadingInvoiceProvinces}
               />
             </div>
 
@@ -383,17 +345,17 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
                 Phường / Xã <span className="text-red-500">*</span>
               </label>
               <SearchableSelect
-                options={wards}
+                options={invoiceWards}
                 value={customerInfo.ward?.code}
-                onChange={(val) => handleWardChange(val, false)}
-                placeholder={loadingWards ? "Đang tải..." : "Chọn Phường / Xã"}
-                disabled={!customerInfo.district || loadingWards}
-                loading={loadingWards}
+                onChange={handleInvoiceWardChange}
+                placeholder={loadingInvoiceWards ? "Đang tải..." : "Chọn Phường / Xã"}
+                disabled={!customerInfo.province || loadingInvoiceWards}
+                loading={loadingInvoiceWards}
               />
             </div>
 
             {/* Detail Address */}
-            <div className="col-span-2 md:col-span-1">
+            <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Địa chỉ chi tiết <span className="text-red-500">*</span>
               </label>
@@ -408,98 +370,79 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
           </div>
         </div>
 
-        {/* Shipping Address Option */}
+        {/* Shipping Address Section (3 Levels) - Always Visible */}
         <div className="col-span-2 border-t border-gray-100 pt-4">
-          <div className="flex items-center gap-2 mb-4">
-            <input
-              type="checkbox"
-              id="sameAddress"
-              checked={customerInfo.isShippingSameAsBilling}
-              onChange={(e) =>
-                handleChange("isShippingSameAsBilling", e.target.checked)
-              }
-              className="w-4 h-4  text-[#F5A623] border-gray-300 rounded focus:ring-[#F5A623]"
-            />
-            <label
-              htmlFor="sameAddress"
-              className="text-sm font-medium text-gray-700 select-none cursor-pointer"
-            >
-              Địa chỉ nhận sách giống địa chỉ xuất hoá đơn
-            </label>
-          </div>
+          <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 animate-fadeIn">
+            <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <TruckIcon className="w-5 h-5 text-[#F5A623]" />
+              Địa chỉ nhận sách
+            </h4>
 
-          {!customerInfo.isShippingSameAsBilling && (
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 animate-fadeIn">
-              <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                <TruckIcon className="w-5 h-5 text-[#F5A623]" />
-                Địa chỉ nhận sách
-              </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Shipping Province */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tỉnh / Thành phố <span className="text-red-500">*</span>
+                </label>
+                <SearchableSelect
+                  options={shippingProvinces}
+                  value={customerInfo.shippingProvince?.code}
+                  onChange={handleShippingProvinceChange}
+                  placeholder="Chọn Tỉnh / Thành phố"
+                  loading={loadingShippingProvinces}
+                  className="bg-white"
+                />
+              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Shipping Province */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tỉnh / Thành phố
-                  </label>
-                  <SearchableSelect
-                    options={provinces}
-                    value={customerInfo.shippingProvince?.code}
-                    onChange={(val) => handleProvinceChange(val, true)}
-                    placeholder="Chọn Tỉnh / Thành phố"
-                    className="bg-white"
-                  />
-                </div>
+              {/* Shipping District */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Quận / Huyện <span className="text-red-500">*</span>
+                </label>
+                <SearchableSelect
+                  options={shippingDistricts}
+                  value={customerInfo.shippingDistrict?.code}
+                  onChange={handleShippingDistrictChange}
+                  placeholder={loadingShippingDistricts ? "Đang tải..." : "Chọn Quận / Huyện"}
+                  disabled={!customerInfo.shippingProvince || loadingShippingDistricts}
+                  loading={loadingShippingDistricts}
+                  className="bg-white"
+                />
+              </div>
 
-                {/* Shipping District */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Quận / Huyện
-                  </label>
-                  <SearchableSelect
-                    options={shippingDistricts}
-                    value={customerInfo.shippingDistrict?.code}
-                    onChange={(val) => handleDistrictChange(val, true)}
-                    placeholder={loadingShippingDistricts ? "Đang tải..." : "Chọn Quận / Huyện"}
-                    disabled={!customerInfo.shippingProvince || loadingShippingDistricts}
-                    loading={loadingShippingDistricts}
-                    className="bg-white"
-                  />
-                </div>
+              {/* Shipping Ward */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phường / Xã <span className="text-red-500">*</span>
+                </label>
+                <SearchableSelect
+                  options={shippingWards}
+                  value={customerInfo.shippingWard?.code}
+                  onChange={handleShippingWardChange}
+                  placeholder={loadingShippingWards ? "Đang tải..." : "Chọn Phường / Xã"}
+                  disabled={!customerInfo.shippingDistrict || loadingShippingWards}
+                  loading={loadingShippingWards}
+                  className="bg-white"
+                />
+              </div>
 
-                {/* Shipping Ward */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phường / Xã
-                  </label>
-                  <SearchableSelect
-                    options={shippingWards}
-                    value={customerInfo.shippingWard?.code}
-                    onChange={(val) => handleWardChange(val, true)}
-                    placeholder={loadingShippingWards ? "Đang tải..." : "Chọn Phường / Xã"}
-                    disabled={!customerInfo.shippingDistrict || loadingShippingWards}
-                    loading={loadingShippingWards}
-                    className="bg-white"
-                  />
-                </div>
-
-                {/* Shipping Detail Address */}
-                <div className="col-span-2 md:col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Địa chỉ chi tiết
-                  </label>
-                  <input
-                    type="text"
-                    value={customerInfo.shippingAddressDetail || ""}
-                    onChange={(e) =>
-                      handleChange("shippingAddressDetail", e.target.value)
-                    }
-                    className="block text-black w-full px-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#F5A623] focus:border-transparent bg-white"
-                    placeholder="Số nhà, tên đường..."
-                  />
-                </div>
+              {/* Shipping Detail Address */}
+              <div className="col-span-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Địa chỉ chi tiết <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={customerInfo.shippingAddressDetail || ""}
+                  onChange={(e) =>
+                    handleChange("shippingAddressDetail", e.target.value)
+                  }
+                  className="block text-black w-full px-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#F5A623] focus:border-transparent bg-white"
+                  placeholder="Số nhà, tên đường..."
+                />
               </div>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Notes */}
