@@ -71,7 +71,7 @@ export default function CampaignInfo({
         {/* Pricing Details */}
         <div className="space-y-4">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500">Giá gốc</span>
+            <span className="text-gray-500">Học phí gốc</span>
             <span className="text-gray-400 line-through decoration-gray-400">
               {formatCurrency(originalPrice)}
             </span>
@@ -81,7 +81,7 @@ export default function CampaignInfo({
             <div className="flex justify-between items-center text-sm bg-green-50 p-3 rounded-lg border border-green-100">
               <span className="text-green-700 font-medium flex items-center gap-1">
                 <TagIcon className="w-4 h-4" />
-                Khuyến mãi ({promotionName})
+                Chiết khấu ({promotionName})
               </span>
               <span className="text-green-700 font-bold">
                 -{formatCurrency(promotionAmount)}
@@ -117,10 +117,10 @@ export default function CampaignInfo({
 
         {/* Trust Badges */}
         <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 gap-4">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
+          {/* <div className="flex items-center gap-2 text-xs text-gray-500">
             <CurrencyDollarIcon className="w-4 h-4 text-[#F5A623]" />
             <span>Hoàn tiền trong 7 ngày</span>
-          </div>
+          </div> */}
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <TagIcon className="w-4 h-4 text-[#F5A623]" />
             <span>Ưu đãi có hạn</span>

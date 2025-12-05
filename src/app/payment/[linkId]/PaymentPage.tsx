@@ -118,6 +118,9 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
     };
 
     let finalNotes = customerInfo.notes || '';
+    if (customerInfo.secondPhoneNumber) {
+      finalNotes += `\n[SĐT 2: ${customerInfo.secondPhoneNumber}]`;
+    }
     const shippingAddress = `${customerInfo.shippingAddressDetail}, ${customerInfo.shippingWard.name}, ${customerInfo.shippingDistrict.name}, ${customerInfo.shippingProvince.name}`;
     finalNotes += `\n[Địa chỉ nhận sách: ${shippingAddress}]`;
 

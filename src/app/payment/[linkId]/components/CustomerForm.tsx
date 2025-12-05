@@ -5,6 +5,17 @@ import { UserIcon, PhoneIcon, EnvelopeIcon, MapPinIcon, PencilSquareIcon, TruckI
 import axios from 'axios';
 import SearchableSelect from './SearchableSelect';
 
+const REFERRAL_SOURCES = [
+  "Fanpage Empire Team- Luyện Thi Đánh Giá Năng Lực",
+  "Fanpage Luyện thi ĐGNL - Empire Team",
+  "Fanpage Empire Team-Luyện Thi ĐGNL Hà Nội",
+  "Website Empire",
+  "Tiktok Empire",
+  "Bạn bè giới thiệu qua tư vấn viên",
+  "CTV",
+  "Khác (có thể điền cụ thể)"
+];
+
 export interface Province {
   code: string;
   name: string;
@@ -23,6 +34,7 @@ export interface Ward {
 export interface CustomerFormData {
   fullName: string;
   phoneNumber: string;
+  secondPhoneNumber?: string;
   email: string;
   
   // Invoice Address (Level 3)
@@ -294,8 +306,31 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
           </div>
         </div>
 
+        {/* Second Phone Number */}
+        <div className="col-span-2 md:col-span-1">
+          <label
+            htmlFor="secondPhoneNumber"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Số điện thoại 2 (Tùy chọn)
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <PhoneIcon className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="tel"
+              id="secondPhoneNumber"
+              value={customerInfo.secondPhoneNumber || ""}
+              onChange={(e) => handleChange("secondPhoneNumber", e.target.value)}
+              className="block text-black w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#F5A623] focus:border-transparent transition-all bg-gray-50 focus:bg-white"
+              placeholder="0912 345 678"
+            />
+          </div>
+        </div>
+
         {/* Email */}
-        <div className="col-span-2">
+        <div className="col-span-2 md:col-span-1">
           <label
             htmlFor="email"
             className="block text-sm font-medium text-gray-700 mb-2"
@@ -445,26 +480,60 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
           </div>
         </div>
 
-        {/* Notes */}
+        {/* Referral Source */}
         <div className="col-span-2">
           <label
-            htmlFor="notes"
+            htmlFor="referralSource"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Ghi chú thêm
+            Bạn biết đến Empire qua đâu?
           </label>
-          <div className="relative">
-            <div className="absolute top-3 left-3 pointer-events-none">
-              <PencilSquareIcon className="h-5 w-5 text-gray-400" />
+          <div className="space-y-3">
+            <div className="relative">
+              <select
+                id="referralSource"
+                value={
+                  REFERRAL_SOURCES.includes(customerInfo.notes || "")
+                    ? customerInfo.notes
+                    : customerInfo.notes?.startsWith("Khác: ")
+                    ? "Khác (có thể điền cụ thể)"
+                    : ""
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "Khác (có thể điền cụ thể)") {
+                    handleChange("notes", "Khác: ");
+                  } else {
+                    handleChange("notes", value);
+                  }
+                }}
+                className="block w-full pl-3 pr-10 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#F5A623] focus:border-transparent transition-all bg-gray-50 focus:bg-white text-black appearance-none"
+              >
+                <option value="" disabled>
+                  -- Chọn nguồn --
+                </option>
+                {REFERRAL_SOURCES.map((source) => (
+                  <option key={source} value={source}>
+                    {source}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
-            <textarea
-              id="notes"
-              value={customerInfo.notes || ""}
-              onChange={(e) => handleChange("notes", e.target.value)}
-              rows={3}
-              className="block text-black w-full pl-10 pr-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#F5A623] focus:border-transparent transition-all bg-gray-50 focus:bg-white resize-none"
-              placeholder="Nhập ghi chú nếu có..."
-            />
+
+            {customerInfo.notes?.startsWith("Khác: ") && (
+              <input
+                type="text"
+                value={customerInfo.notes.substring(6)}
+                onChange={(e) => handleChange("notes", `Khác: ${e.target.value}`)}
+                className="block w-full px-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#F5A623] focus:border-transparent transition-all bg-white text-black"
+                placeholder="Nhập cụ thể..."
+              />
+            )}
           </div>
         </div>
       </div>
