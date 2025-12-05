@@ -112,7 +112,7 @@ export default function CustomerForm({ customerInfo, onChange }: CustomerFormPro
       }
       try {
         setLoadingInvoiceWards(true);
-        const response = await axios.get(`https://api-geo.galaxyedu.io/api/provinces/${customerInfo.province.code}`);
+        const response = await axios.get(`https://api-geo-three.vercel.app/api/provinces/${customerInfo.province.code}`);
         if (response.data && response.data.data && response.data.data.wards) {
           setInvoiceWards(response.data.data.wards);
         }
