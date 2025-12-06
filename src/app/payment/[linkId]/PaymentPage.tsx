@@ -85,8 +85,8 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
     
     if (!paymentLinkData) return;
 
-    if (!customerInfo.fullName || !customerInfo.phoneNumber) {
-      alert('Vui lòng điền đầy đủ thông tin bắt buộc (Họ tên và Số điện thoại)');
+    if (!customerInfo.fullName || !customerInfo.phoneNumber || !customerInfo.email) {
+      alert('Vui lòng điền đầy đủ thông tin bắt buộc (Họ tên, Số điện thoại và Email)');
       return;
     }
 

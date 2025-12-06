@@ -83,9 +83,12 @@ export default function CampaignInfo({
                 <TagIcon className="w-4 h-4" />
                 Chiết khấu ({promotionName})
               </span>
-              <span className="text-green-700 font-bold">
-                -{formatCurrency(promotionAmount)}
-              </span>
+              <div className="text-right">
+                <span className="block text-green-700 font-bold">
+                  {formatCurrency(originalPrice - promotionAmount)}
+                </span>
+               
+              </div>
             </div>
           )}
 
@@ -100,7 +103,7 @@ export default function CampaignInfo({
 
           <div className="pt-4 border-t border-gray-100">
             <div className="flex justify-between items-end">
-              <span className="text-gray-600 font-medium">Tổng thanh toán</span>
+              <span className="text-gray-600 font-medium">Tổng học phí cần thanh toán</span>
               <div className="text-right">
                 <span className="block text-3xl font-bold text-[#F5A623]">
                   {formatCurrency(finalAmount)}
