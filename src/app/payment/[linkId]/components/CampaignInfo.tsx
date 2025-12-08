@@ -39,12 +39,25 @@ export default function CampaignInfo({
   };
 
   const originalPrice = getOriginalPrice();
-  const promotionName = selectedPromotion.toUpperCase();
+  const promotionName = () => {
+    switch (selectedPromotion) {
+      case "km01":
+        return "Giá cá nhân";
+      case "km02":
+        return "Giá nhóm 5";
+      case "km03":
+        return "Giá nhóm 10";
+        break;
+    
+      default:
+        break;
+    }
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden sticky top-8">
       {/* Header Image/Gradient */}
-      <div className="h-32 bg-gradient-to-br from-gray-900 to-gray-800 relative p-6 flex flex-col justify-end">
+      <div className="h-32 bg-linear-to-br from-gray-900 to-gray-800 relative p-6 flex flex-col justify-end">
         <div className="absolute top-0 right-0 p-4 opacity-10">
           <TagIcon className="w-24 h-24 text-white" />
         </div>
@@ -60,13 +73,13 @@ export default function CampaignInfo({
 
       <div className="p-6">
         {/* Description */}
-        {campaign.description && (
+        {/* {campaign.description && (
           <div className="mb-6 pb-6 border-b border-gray-100">
             <p className="text-gray-600 text-sm leading-relaxed">
               {campaign.description}
             </p>
           </div>
-        )}
+        )} */}
 
         {/* Pricing Details */}
         <div className="space-y-4">
@@ -81,11 +94,11 @@ export default function CampaignInfo({
             <div className="flex justify-between items-center text-sm bg-green-50 p-3 rounded-lg border border-green-100">
               <span className="text-green-700 font-medium flex items-center gap-1">
                 <TagIcon className="w-4 h-4" />
-                Chiết khấu ({promotionName})
+                Chiết khấu ({promotionName()})
               </span>
               <div className="text-right">
                 <span className="block text-green-700 font-bold">
-                  {formatCurrency(originalPrice - promotionAmount)}
+                  {formatCurrency(promotionAmount)}
                 </span>
                
               </div>

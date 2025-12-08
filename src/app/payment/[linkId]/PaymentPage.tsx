@@ -59,6 +59,14 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       
       const paymentLink = await paymentService.getPaymentLink(linkId);
       
+      console.log('📋 Payment Link Data:', {
+        final_amount: paymentLink.final_amount,
+        deposit_amount: paymentLink.deposit_amount,
+        is_deposit: paymentLink.is_deposit,
+        promotion_amount: paymentLink.promotion_amount,
+        selected_promotion: paymentLink.selected_promotion
+      });
+      
       if (paymentLink.is_expired) {
         setError('Link thanh toán đã hết hạn');
         return;
@@ -140,6 +148,14 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
         notes: finalNotes || undefined,
         payment_channel: 'manual_bank_transfer',
         promotion_code: paymentLinkData.selected_promotion ? paymentLinkData.selected_promotion.toUpperCase() : undefined,
+      });
+      
+      // Debug logging
+      console.log('📊 Order created:', {
+        total_amount: newOrder.total_amount,
+        payment_info_amount: newOrder.payment_info?.amount,
+        virtual_account_amount: newOrder.virtual_account?.equal_amount,
+        expected_finalAmount: paymentLinkData.final_amount
       });
       
       setOrder(newOrder);
