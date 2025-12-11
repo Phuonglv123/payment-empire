@@ -78,6 +78,15 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
         return;
       }
 
+      // Check if campaign has reached maximum quantity
+      const campaign = paymentLink.campaign;
+      if (campaign.used_quantity !== undefined && 
+          campaign.max_quantity !== undefined && 
+          campaign.used_quantity >= campaign.max_quantity) {
+        setError('Chương trình đã hết hạn');
+        return;
+      }
+
       setPaymentLinkData(paymentLink);
     } catch (err: unknown) {
       console.error('Error loading payment data:', err);

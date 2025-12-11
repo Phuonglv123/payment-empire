@@ -231,12 +231,4 @@ The system includes a webhook endpoint at `/api/webhooks/payment` to receive pay
 
 This project is licensed under the MIT License.
 
-Cần điều chỉnh lại logic hiện thị thông tin sản phẩm và giá tiền cho phù hợp với ngữ cảnh học phí khóa học thay vì giá sản phẩm bán lẻ.
-logic như sau:
-- hiện thị "Học phí gốc" thay vì "Giá gốc"
-- hiện thị "Chiết khấu" thay vì "Khuyến mãi"
-- hiện thị số tiền cần phải thanh toán sau khi đã áp dụng chiết khấu
-- Ví dụ: 
-  Học phí gốc: 5,000,000 VND
-  Chiết khấu (KM02) còn lại: 3,500,000 VND (giảm 1,500,000 VND) 
-  Tổng học phí cần thanh toán: 3,500,000 VND
+Cập nhật lại phần thanh toán. khi lấy thông tin payment link sẽ có thêm 2. field mới trong campaign là used_quantity và max_quantity. Khi hiển thị thông tin chiến dịch trên trang thanh toán, nếu used_quantity >= max_quantity thì sẽ hiển thị thông báo "Chương trình đã hết hạn" và không cho phép người dùng tiếp tục điền thông tin thanh toán.

@@ -21,6 +21,8 @@ export interface Campaign {
   start_date?: string;
   end_date?: string;
   is_active?: boolean;
+  used_quantity?: number;
+  max_quantity?: number;
   created_at?: string;
   updated_at?: string;
 }

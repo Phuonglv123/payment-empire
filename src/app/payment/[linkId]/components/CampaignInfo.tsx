@@ -54,6 +54,11 @@ export default function CampaignInfo({
     }
   };
 
+  // Check if campaign has reached maximum quantity
+  const isCampaignExpired = campaign.used_quantity !== undefined && 
+                            campaign.max_quantity !== undefined && 
+                            campaign.used_quantity >= campaign.max_quantity;
+
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden sticky top-8">
       {/* Header Image/Gradient */}
@@ -72,6 +77,23 @@ export default function CampaignInfo({
       </div>
 
       <div className="p-6">
+        {/* Expired Campaign Banner */}
+        {isCampaignExpired && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 font-semibold text-center flex items-center justify-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              Chương trình đã hết hạn
+            </p>
+            {campaign.max_quantity && (
+              <p className="text-red-600 text-xs text-center mt-1">
+                Đã đạt số lượng tối đa: {campaign.max_quantity}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Description */}
         {/* {campaign.description && (
           <div className="mb-6 pb-6 border-b border-gray-100">
@@ -130,6 +152,29 @@ export default function CampaignInfo({
             </div>
           </div>
         </div>
+
+        {/* Quantity Information */}
+        {campaign.max_quantity !== undefined && campaign.used_quantity !== undefined && (
+          <div className="mt-6 pt-6 border-t border-gray-100">
+            <div className="flex justify-between items-center text-sm mb-2">
+              <span className="text-gray-600 font-medium">Số lượng còn lại</span>
+              <span className={`font-bold ${isCampaignExpired ? 'text-red-600' : 'text-[#F5A623]'}`}>
+                {campaign.max_quantity - campaign.used_quantity}/{campaign.max_quantity}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              <div 
+                className={`h-full transition-all ${isCampaignExpired ? 'bg-red-500' : 'bg-[#F5A623]'}`}
+                style={{ width: `${Math.min((campaign.used_quantity / campaign.max_quantity) * 100, 100)}%` }}
+              />
+            </div>
+            {!isCampaignExpired && campaign.max_quantity - campaign.used_quantity <= 5 && (
+              <p className="text-xs text-orange-600 mt-2 text-center font-medium">
+                ⚠️ Chỉ còn {campaign.max_quantity - campaign.used_quantity} suất!
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Trust Badges */}
         <div className="mt-6 pt-6 border-t border-gray-100 grid grid-cols-2 gap-4">
