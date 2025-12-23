@@ -192,3 +192,47 @@ export interface LegacyPaymentLinkData {
   is_expired: boolean;
   expires_at: string;
 }
+
+// Order Transaction types for direct order payment
+export interface OrderTransaction {
+  id: string;
+  transaction_type: 'deposit' | 'remaining' | 'full';
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  reference_code: string;
+  created_at: string;
+}
+
+export interface OrderInfo {
+  id: string;
+  order_code: string;
+  customer_name: string;
+  total_amount: number;
+  deposit_amount: number;
+  paid_amount: number;
+  remaining_amount: number;
+  order_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  payment_status: 'unpaid' | 'partial' | 'paid';
+}
+
+export interface OrderCampaign {
+  id: string;
+  name: string;
+  original_price: number;
+}
+
+export interface OrderPaymentInfo {
+  bank_name: string;
+  account_number: string;
+  account_name: string;
+  transfer_note: string;
+}
+
+export interface OrderTransactionData {
+  transaction: OrderTransaction;
+  order: OrderInfo;
+  campaign: OrderCampaign;
+  payment_info: OrderPaymentInfo;
+  all_transactions: OrderTransaction[];
+}

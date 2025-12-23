@@ -4,6 +4,7 @@ import {
   PublicOrder,
   ApiResponse,
   CreateOrderRequest,
+  OrderTransactionData,
 } from '@/lib/types/payment.types';
 
 /**
@@ -59,6 +60,23 @@ export const paymentService = {
     
     if (response.data.errorCode !== 'SUCCESS' || !response.data.data) {
       throw new Error(response.data.message || 'Failed to check order status');
+    }
+    
+    return response.data.data;
+  },
+
+  /**
+   * Get order transaction data for direct payment
+   * @param orderId - The order ID
+   * @returns Order transaction data including payment info
+   */
+  getOrderTransaction: async (orderId: string): Promise<OrderTransactionData> => {
+    const response = await api.get<ApiResponse<OrderTransactionData>>(
+      `/public/orders/${orderId}/transactions`
+    );
+    
+    if (response.data.errorCode !== 'SUCCESS' || !response.data.data) {
+      throw new Error(response.data.message || 'Không tìm thấy thông tin đơn hàng');
     }
     
     return response.data.data;
