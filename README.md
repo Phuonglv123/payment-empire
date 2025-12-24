@@ -232,3 +232,89 @@ The system includes a webhook endpoint at `/api/webhooks/payment` to receive pay
 This project is licensed under the MIT License.
 
 Cập nhật lại phần thanh toán. khi lấy thông tin payment link sẽ có thêm 2. field mới trong campaign là used_quantity và max_quantity. Khi hiển thị thông tin chiến dịch trên trang thanh toán, nếu used_quantity >= max_quantity thì sẽ hiển thị thông báo "Chương trình đã hết hạn" và không cho phép người dùng tiếp tục điền thông tin thanh toán.
+
+Thay đổi lại luồng thanh toán cho hệ thống để phù hơn hợp với yêu cầu mới như sau:
+
+
+## Cách sử dụng cho Order Public FE
+
+### Request tạo order:
+```typescript
+POST /api/v1/public/orders
+Content-Type: application/json
+
+{
+  "customer_name": "Nguyễn Văn A",
+  "customer_phone": "0901234567",
+  "campaign_id": "uuid-campaign",
+  "customer_email": "email@test.com",        // optional
+  "payment_channel": "msb",                   // "msb" hoặc "manual"
+  "return_url": "https://order.example.com/payment/result"  // URL redirect sau thanh toán
+}
+```
+
+### Response:
+```json
+{
+  "errorCode": "SUCCESS",
+  "message": "Order created successfully",
+  "data": {
+    "id": "order-uuid",
+    "order_code": "ORD-20251224-001",
+    "customer_name": "Nguyễn Văn A",
+    "total_amount": 1000000,
+    ...
+  },
+  "payment_url": "https://acq-stating.msb.com.vn/payment/...",
+  "session_id": "session-uuid",
+  "expires_at": "2025-12-24T10:05:00Z"
+}
+```
+
+### FE Flow:
+```typescript
+// 1. Gọi API tạo order
+const response = await fetch('/api/v1/public/orders', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    customer_name: formData.name,
+    customer_phone: formData.phone,
+    campaign_id: campaignId,
+    payment_channel: 'msb',
+    return_url: `${window.location.origin}/payment/result`
+  })
+});
+
+const data = await response.json();
+
+// 2. Redirect đến trang thanh toán MSB
+if (data.payment_url) {
+  window.location.href = data.payment_url;
+}
+```
+
+### Trang `/payment/result`:
+```typescript
+// URL sẽ có params: ?session_id=xxx&status=success&order_id=xxx
+const params = new URLSearchParams(window.location.search);
+const status = params.get('status');
+const orderId = params.get('order_id');
+
+if (status === 'success') {
+  // Hiển thị "Thanh toán thành công"
+} else {
+  // Hiển thị "Thanh toán thất bại hoặc đang xử lý"
+}
+```
+Vậy cần có 1 route mới `/payment/result` để hiển thị kết quả thanh toán cho khách hàng.
+Chuyển hướng luồng thanh toán sang sử dụng hệ thống thanh toán của MSB thay vì QR code ngân hàng như trước đây.
+1. Khách hàng truy cập link thanh toán `/payment/[linkId]`.
+2. Hệ thống kiểm tra `used_quantity` và `max_quantity` của chiến dịch.
+   - Nếu `used_quantity >= max_quantity`, hiển thị thông báo "Chương trình đã hết hạn" và không cho phép điền thông tin thanh toán.
+   - Nếu còn hạn, hiển thị thông tin chiến dịch và form điền thông tin khách hàng.
+3. Khách hàng điền thông tin và gửi form.
+4. Hệ thống gọi API tạo order và nhận về `payment_url` từ MSB.
+5. Chuyển hướng khách hàng đến `payment_url` để thực hiện thanh toán.
+6. Sau khi thanh toán, khách hàng được chuyển hướng về trang `/payment/result` với trạng thái thanh toán.
+7. Hệ thống hiển thị kết quả thanh toán (thành công/thất bại) dựa trên tham số trong URL.

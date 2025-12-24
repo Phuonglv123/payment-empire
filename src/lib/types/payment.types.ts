@@ -47,7 +47,7 @@ export interface CustomerInfo {
 
 // Request body for creating order via public API
 export interface CreateOrderRequest {
-  payment_link_token: string;
+  payment_link_token?: string;
   customer_name: string;
   customer_phone: string;
   customer_email?: string;
@@ -57,8 +57,9 @@ export interface CreateOrderRequest {
   student_group?: string;
   notes?: string;
   campaign_id: string;
-  payment_channel?: string;
+  payment_channel?: string; // "msb" or "manual"
   promotion_code?: string;
+  return_url?: string; // URL redirect after payment
 }
 
 // Virtual Account info returned from backend
@@ -191,6 +192,16 @@ export interface LegacyPaymentLinkData {
   final_amount: number;
   is_expired: boolean;
   expires_at: string;
+}
+
+// MSB Payment Response types
+export interface CreateOrderResponse {
+  errorCode: string;
+  message: string;
+  data: PublicOrder;
+  payment_url?: string;
+  session_id?: string;
+  expires_at?: string;
 }
 
 // Order Transaction types for direct order payment

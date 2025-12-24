@@ -5,6 +5,7 @@ import {
   ApiResponse,
   CreateOrderRequest,
   OrderTransactionData,
+  CreateOrderResponse,
 } from '@/lib/types/payment.types';
 
 /**
@@ -31,12 +32,12 @@ export const paymentService = {
 
   /**
    * Create a public order with customer information
-   * Backend automatically creates Virtual Account and returns it in the response
+   * Returns payment_url for MSB redirect if payment_channel is 'msb'
    * @param orderData - Order creation data including token and customer info
-   * @returns Order details with virtual account information
+   * @returns Order response with optional payment_url for MSB redirect
    */
-  createOrder: async (orderData: CreateOrderRequest): Promise<PublicOrder> => {
-    const response = await api.post<ApiResponse<PublicOrder>>(
+  createOrder: async (orderData: CreateOrderRequest): Promise<CreateOrderResponse> => {
+    const response = await api.post<CreateOrderResponse>(
       '/public/orders',
       orderData
     );
@@ -45,7 +46,7 @@ export const paymentService = {
       throw new Error(response.data.message || 'Failed to create order');
     }
     
-    return response.data.data;
+    return response.data;
   },
 
   /**

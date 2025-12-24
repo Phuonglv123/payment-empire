@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { paymentService } from '@/lib/services/payment.service';
-import { PaymentLinkData, PublicOrder } from '@/lib/types/payment.types';
+import { PaymentLinkData } from '@/lib/types/payment.types';
 import CampaignInfo from './components/CampaignInfo';
 import CustomerForm, { CustomerFormData } from './components/CustomerForm';
-import PaymentInfo from './components/PaymentInfo';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ExclamationTriangleIcon, CheckCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
@@ -25,32 +24,12 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
     addressDetail: '',
     isShippingSameAsBilling: true,
   });
-  const [order, setOrder] = useState<PublicOrder | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     loadPaymentData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkId]);
-
-  // Poll for payment status when order is created
-  useEffect(() => {
-    if (!order || order.payment_status === 'paid') return;
-
-    const interval = setInterval(async () => {
-      try {
-        const updatedOrder = await paymentService.checkOrderStatus(order.id);
-        if (updatedOrder.payment_status === 'paid') {
-          setOrder(updatedOrder);
-          clearInterval(interval);
-        }
-      } catch (error) {
-        console.error('Error checking payment status:', error);
-      }
-    }, 3000); // Check every 3 seconds
-
-    return () => clearInterval(interval);
-  }, [order]);
 
   const loadPaymentData = async () => {
     try {
@@ -145,7 +124,10 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       setIsProcessing(true);
       setError(null);
 
-      const newOrder = await paymentService.createOrder( {
+      // Build return URL for MSB payment redirect
+      const returnUrl = `${window.location.origin}/payment/result`;
+
+      const response = await paymentService.createOrder({
         campaign_id: paymentLinkData.campaign.id,
         payment_link_token: linkId,
         customer_name: customerInfo.fullName,
@@ -155,24 +137,30 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
         address_level_1: JSON.stringify(invoiceAddressObj),
         address_level_2: JSON.stringify(shippingAddressObj),
         notes: finalNotes || undefined,
-        payment_channel: 'manual_bank_transfer',
+        payment_channel: 'msb',
         promotion_code: paymentLinkData.selected_promotion ? paymentLinkData.selected_promotion.toUpperCase() : undefined,
+        return_url: returnUrl,
       });
       
       // Debug logging
       console.log('📊 Order created:', {
-        total_amount: newOrder.total_amount,
-        payment_info_amount: newOrder.payment_info?.amount,
-        virtual_account_amount: newOrder.virtual_account?.equal_amount,
-        expected_finalAmount: paymentLinkData.final_amount
+        order: response.data,
+        payment_url: response.payment_url,
+        session_id: response.session_id,
+        expires_at: response.expires_at,
       });
       
-      setOrder(newOrder);
+      // Redirect to MSB payment URL if available
+      if (response.payment_url) {
+        window.location.href = response.payment_url;
+      } else {
+        // Fallback: redirect to result page with order info
+        window.location.href = `/payment/result?status=pending&order_id=${response.data.order_code}`;
+      }
     } catch (err: unknown) {
       console.error('Error processing payment:', err);
       const errorMessage = err instanceof Error ? err.message : 'Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.';
       setError(errorMessage);
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -206,42 +194,6 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
             <a href="/" className="inline-block bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors">
               Về trang chủ
             </a>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
-
-  if (order && order.payment_status === 'paid') {
-    return (
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header />
-        <div className="flex-1 flex items-center justify-center p-4">
-          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-gray-100">
-            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircleIcon className="w-10 h-10 text-green-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Thanh toán thành công!</h2>
-            <p className="text-gray-600 mb-6">
-              Cảm ơn bạn đã thanh toán. Thông tin đơn hàng đã được gửi đến email của bạn.
-            </p>
-            <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-6 text-left">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Mã đơn hàng</span>
-                <span className="font-mono font-bold text-gray-900">{order.order_code}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Số tiền</span>
-                <span className="font-bold text-[#F5A623]">{new Intl.NumberFormat('vi-VN').format(order.total_amount)} ₫</span>
-              </div>
-            </div>
-            <button 
-              onClick={() => window.location.reload()}
-              className="w-full bg-[#F5A623] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#E09612] transition-colors shadow-lg shadow-orange-200"
-            >
-              Hoàn tất
-            </button>
           </div>
         </div>
         <Footer />
@@ -301,40 +253,42 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
                 </div>
               </div>
 
-              {/* Right Column: Payment Form / Info */}
+              {/* Right Column: Payment Form */}
               <div className="lg:col-span-7">
-                {!order ? (
-                  <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
-                    <div className="p-6 lg:p-8">
-                      <CustomerForm 
-                        customerInfo={customerInfo}
-                        onChange={setCustomerInfo}
-                      />
-                      
-                      <div className="mt-8 pt-6 border-t border-gray-100">
-                        <button
-                          onClick={handleSubmitPayment}
-                          disabled={isProcessing}
-                          className="w-full bg-[#F5A623] hover:bg-[#E09612] text-white font-bold py-4 px-6 rounded-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-orange-100 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          {isProcessing ? (
-                            <>
-                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              <span>Đang xử lý...</span>
-                            </>
-                          ) : (
-                            <span>Tiến hành thanh toán</span>
-                          )}
-                        </button>
-                        <p className="text-center text-xs text-gray-400 mt-4">
-                          Bằng việc thanh toán, bạn đồng ý với điều khoản dịch vụ của chúng tôi
-                        </p>
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+                  <div className="p-6 lg:p-8">
+                    <CustomerForm 
+                      customerInfo={customerInfo}
+                      onChange={setCustomerInfo}
+                    />
+                    
+                    {error && (
+                      <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-red-600 text-sm">{error}</p>
                       </div>
+                    )}
+                    
+                    <div className="mt-8 pt-6 border-t border-gray-100">
+                      <button
+                        onClick={handleSubmitPayment}
+                        disabled={isProcessing}
+                        className="w-full bg-[#F5A623] hover:bg-[#E09612] text-white font-bold py-4 px-6 rounded-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-orange-100 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {isProcessing ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span>Đang xử lý...</span>
+                          </>
+                        ) : (
+                          <span>Tiến hành thanh toán</span>
+                        )}
+                      </button>
+                      <p className="text-center text-xs text-gray-400 mt-4">
+                        Bạn sẽ được chuyển đến trang thanh toán an toàn của ngân hàng
+                      </p>
                     </div>
                   </div>
-                ) : (
-                  <PaymentInfo order={order} />
-                )}
+                </div>
               </div>
             </div>
           )}
