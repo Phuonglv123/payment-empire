@@ -57,34 +57,48 @@ export interface CreateOrderRequest {
   student_group?: string;
   notes?: string;
   campaign_id: string;
-  payment_channel?: string; // "msb" or "manual"
   promotion_code?: string;
-  return_url?: string; // URL redirect after payment
 }
 
-// Virtual Account info returned from backend
-export interface VirtualAccount {
-  id: string;
-  account_number: string;
-  reference_number: string;
-  name: string;
-  pay_type: string;
-  max_amount: number;
-  min_amount: number;
-  equal_amount: number;
-  detail1: string;
-  detail2: string;
-  detail3: string;
-  email: string;
-  phone: string;
-  expiry_date: string;
-  status: string;
+// VietQR Payment Info - Thông tin thanh toán VietQR
+export interface VietQRPaymentInfo {
+  payment_id: string;
   order_id: string;
-  qr_code: string;
+  order_code: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  bank_code: string;
+  bank_name: string;
+  account_number: string;
+  account_holder: string;
+  description: string;
+  qr_code_url: string;
+  vietqr_link: string;
+  expires_at: string;
   created_at: string;
-  updated_at: string;
 }
 
+// Payment Status types
+export type PaymentStatus = 'pending' | 'confirmed' | 'completed' | 'expired' | 'cancelled';
+
+// Payment Status Response
+export interface PaymentStatusResponse {
+  payment_id: string;
+  order_code: string;
+  status: PaymentStatus;
+  amount: number;
+  payment_date: string | null;
+  confirmed_at: string | null;
+}
+
+// Payment Confirm Request
+export interface PaymentConfirmRequest {
+  payment_proof_image?: string;
+  note?: string;
+}
+
+// Legacy interfaces for backward compatibility
 export interface ManualPaymentInfo {
   bank_name: string;
   account_number: string;
@@ -107,6 +121,7 @@ export interface PublicOrder {
   unit_price: number;
   original_amount: number;
   total_amount: number;
+  paid_amount: number;
   order_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   payment_status: 'unpaid' | 'paid' | 'refunded';
   payment_type: 'full' | 'deposit';
@@ -115,9 +130,6 @@ export interface PublicOrder {
   campaign_id: string;
   campaign: Campaign;
   notes?: string;
-  virtual_account?: VirtualAccount;
-  payment_info?: ManualPaymentInfo;
-  payment_channel?: string;
   created_at: string;
   updated_at: string;
 }
@@ -180,70 +192,10 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-// Legacy PaymentLinkData (kept for backward compatibility)
-export interface LegacyPaymentLinkData {
-  errorCode: string;
-  token: string;
-  campaign: Campaign;
-  selected_promotion: string;
-  promotion_amount: number;
-  is_deposit: boolean;
-  deposit_amount: number;
-  final_amount: number;
-  is_expired: boolean;
-  expires_at: string;
-}
-
-// MSB Payment Response types
+// Create Order Response with VietQR payment info
 export interface CreateOrderResponse {
   errorCode: string;
   message: string;
   data: PublicOrder;
-  payment_url?: string;
-  session_id?: string;
-  expires_at?: string;
-}
-
-// Order Transaction types for direct order payment
-export interface OrderTransaction {
-  id: string;
-  transaction_type: 'deposit' | 'remaining' | 'full';
-  amount: number;
-  currency: string;
-  status: 'pending' | 'completed' | 'failed' | 'cancelled';
-  reference_code: string;
-  created_at: string;
-}
-
-export interface OrderInfo {
-  id: string;
-  order_code: string;
-  customer_name: string;
-  total_amount: number;
-  deposit_amount: number;
-  paid_amount: number;
-  remaining_amount: number;
-  order_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  payment_status: 'unpaid' | 'partial' | 'paid';
-}
-
-export interface OrderCampaign {
-  id: string;
-  name: string;
-  original_price: number;
-}
-
-export interface OrderPaymentInfo {
-  bank_name: string;
-  account_number: string;
-  account_name: string;
-  transfer_note: string;
-}
-
-export interface OrderTransactionData {
-  transaction: OrderTransaction;
-  order: OrderInfo;
-  campaign: OrderCampaign;
-  payment_info: OrderPaymentInfo;
-  all_transactions: OrderTransaction[];
+  payment_info: VietQRPaymentInfo;
 }

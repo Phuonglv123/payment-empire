@@ -1,17 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { paymentService } from '@/lib/services/payment.service';
-import { PaymentLinkData } from '@/lib/types/payment.types';
+import { PaymentLinkData, VietQRPaymentInfo, PaymentStatusResponse, PublicOrder } from '@/lib/types/payment.types';
 import CampaignInfo from './components/CampaignInfo';
 import CustomerForm, { CustomerFormData } from './components/CustomerForm';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { ExclamationTriangleIcon, CheckCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, CheckCircleIcon, ShieldCheckIcon, ClipboardDocumentIcon, CheckIcon, ArrowDownTrayIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 interface PaymentPageProps {
   linkId: string;
 }
+
+type PaymentStep = 'form' | 'payment' | 'waiting' | 'success';
 
 export default function PaymentPage({ linkId }: PaymentPageProps) {
   const [paymentLinkData, setPaymentLinkData] = useState<PaymentLinkData | null>(null);
@@ -25,6 +27,13 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
     isShippingSameAsBilling: true,
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // New states for VietQR flow
+  const [currentStep, setCurrentStep] = useState<PaymentStep>('form');
+  const [orderData, setOrderData] = useState<PublicOrder | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<VietQRPaymentInfo | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatusResponse | null>(null);
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
   useEffect(() => {
     loadPaymentData();
@@ -69,12 +78,41 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       setPaymentLinkData(paymentLink);
     } catch (err: unknown) {
       console.error('Error loading payment data:', err);
-      // If error is 404-like, we can show a specific message
       setError('Link thanh toán không tồn tại hoặc đã hết hạn');
     } finally {
       setLoading(false);
     }
   };
+
+  // Polling for payment status
+  const startStatusPolling = useCallback(() => {
+    if (!paymentInfo) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const status = await paymentService.checkPaymentStatus(paymentInfo.payment_id);
+        setPaymentStatus(status);
+        
+        if (status.status === 'completed') {
+          setCurrentStep('success');
+          clearInterval(intervalId);
+        } else if (status.status === 'cancelled' || status.status === 'expired') {
+          clearInterval(intervalId);
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+      }
+    }, 10000); // Poll every 10 seconds
+
+    return () => clearInterval(intervalId);
+  }, [paymentInfo]);
+
+  useEffect(() => {
+    if (currentStep === 'payment' || currentStep === 'waiting') {
+      const cleanup = startStatusPolling();
+      return cleanup;
+    }
+  }, [currentStep, startStatusPolling]);
 
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,9 +162,6 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
       setIsProcessing(true);
       setError(null);
 
-      // Build return URL for MSB payment redirect
-      const returnUrl = `${window.location.origin}/payment/result`;
-
       const response = await paymentService.createOrder({
         campaign_id: paymentLinkData.campaign.id,
         payment_link_token: linkId,
@@ -137,31 +172,71 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
         address_level_1: JSON.stringify(invoiceAddressObj),
         address_level_2: JSON.stringify(shippingAddressObj),
         notes: finalNotes || undefined,
-        payment_channel: 'msb',
         promotion_code: paymentLinkData.selected_promotion ? paymentLinkData.selected_promotion.toUpperCase() : undefined,
-        return_url: returnUrl,
       });
       
-      // Debug logging
       console.log('📊 Order created:', {
         order: response.data,
-        payment_url: response.payment_url,
-        session_id: response.session_id,
-        expires_at: response.expires_at,
+        payment_info: response.payment_info,
       });
       
-      // Redirect to MSB payment URL if available
-      if (response.payment_url) {
-        window.location.href = response.payment_url;
-      } else {
-        // Fallback: redirect to result page with order info
-        window.location.href = `/payment/result?status=pending&order_id=${response.data.order_code}`;
-      }
+      // Store order and payment info
+      setOrderData(response.data);
+      setPaymentInfo(response.payment_info);
+      
+      // Move to payment step
+      setCurrentStep('payment');
+      setIsProcessing(false);
     } catch (err: unknown) {
       console.error('Error processing payment:', err);
       const errorMessage = err instanceof Error ? err.message : 'Có lỗi xảy ra khi xử lý thanh toán. Vui lòng thử lại.';
       setError(errorMessage);
       setIsProcessing(false);
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!paymentInfo) return;
+
+    try {
+      await paymentService.confirmPayment(paymentInfo.payment_id);
+      setCurrentStep('waiting');
+    } catch (error) {
+      console.error('Error confirming payment:', error);
+      alert('Có lỗi xảy ra khi xác nhận thanh toán. Vui lòng thử lại.');
+    }
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(label);
+      setTimeout(() => setCopySuccess(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
+  };
+
+  const downloadQR = async () => {
+    if (!paymentInfo) return;
+
+    try {
+      const response = await fetch(paymentInfo.qr_code_url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `QR-${paymentInfo.order_code}.jpg`;
+      link.click();
+      
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading QR code:', error);
     }
   };
 
@@ -201,6 +276,245 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
     );
   }
 
+  // Success Step
+  if (currentStep === 'success') {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-gray-100">
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircleIcon className="w-10 h-10 text-green-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Thanh toán thành công!</h2>
+            <p className="text-gray-600 mb-6">
+              Cảm ơn bạn đã thanh toán. Thông tin đơn hàng đã được gửi đến email của bạn.
+            </p>
+            {orderData && (
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-6 text-left">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Mã đơn hàng</span>
+                  <span className="font-mono font-bold text-gray-900">{orderData.order_code}</span>
+                </div>
+                {paymentInfo && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Số tiền</span>
+                    <span className="font-bold text-[#F5A623]">{formatCurrency(paymentInfo.amount)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            <a 
+              href="/"
+              className="w-full inline-block bg-[#F5A623] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#E09612] transition-colors shadow-lg shadow-orange-200"
+            >
+              Về trang chủ
+            </a>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Waiting Step - Customer confirmed, waiting for admin approval
+  if (currentStep === 'waiting') {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-gray-100">
+            <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ClockIcon className="w-10 h-10 text-yellow-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Đang xác nhận thanh toán</h2>
+            <p className="text-gray-600 mb-6">
+              Chúng tôi đã nhận được xác nhận của bạn. Vui lòng đợi admin xác nhận thanh toán.
+            </p>
+            {orderData && (
+              <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-6 text-left">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Mã đơn hàng</span>
+                  <span className="font-mono font-bold text-gray-900">{orderData.order_code}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Trạng thái</span>
+                  <span className="font-medium text-yellow-600">
+                    {paymentStatus?.status === 'confirmed' ? 'Đã xác nhận - chờ duyệt' : 'Đang xử lý'}
+                  </span>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm animate-pulse mb-6">
+              <div className="w-2 h-2 bg-[#F5A623] rounded-full"></div>
+              Hệ thống sẽ tự động cập nhật khi thanh toán được xác nhận
+            </div>
+            <a 
+              href="/"
+              className="w-full inline-block bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+            >
+              Về trang chủ
+            </a>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Payment Step - Show QR Code
+  if (currentStep === 'payment' && paymentInfo) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
+        <Header />
+        
+        <main className="flex-1 py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-10">
+              <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
+                Thanh toán đơn hàng
+              </h1>
+              <p className="text-gray-600">
+                Mã đơn hàng: <span className="font-mono font-bold text-[#F5A623]">{paymentInfo.order_code}</span>
+              </p>
+              <div className="flex items-center justify-center gap-2 text-gray-500 text-sm mt-2">
+                <ShieldCheckIcon className="w-5 h-5 text-green-500" />
+                <span>Thông tin được bảo mật an toàn 100%</span>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+              <div className="bg-[#F5A623] p-4 text-center">
+                <h2 className="text-white font-bold text-lg">THÔNG TIN CHUYỂN KHOẢN</h2>
+                <p className="text-white/90 text-sm">Vui lòng chuyển khoản chính xác số tiền bên dưới</p>
+              </div>
+
+              <div className="p-6 lg:p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* QR Code */}
+                  <div className="flex flex-col items-center">
+                    <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100 mb-4">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={paymentInfo.qr_code_url}
+                        alt="QR Code thanh toán"
+                        className="w-48 h-48 object-contain"
+                      />
+                    </div>
+                    <button
+                      onClick={downloadQR}
+                      className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#F5A623] transition-colors"
+                    >
+                      <ArrowDownTrayIcon className="w-4 h-4" />
+                      Tải mã QR
+                    </button>
+                  </div>
+
+                  {/* Bank Details */}
+                  <div className="space-y-5">
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Ngân hàng</label>
+                      <p className="text-gray-900 font-medium text-lg">{paymentInfo.bank_name}</p>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Chủ tài khoản</label>
+                      <p className="text-gray-900 font-medium text-lg">{paymentInfo.account_holder}</p>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Số tài khoản</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-2xl font-bold text-[#F5A623] font-mono tracking-wide">{paymentInfo.account_number}</p>
+                        <button
+                          onClick={() => copyToClipboard(paymentInfo.account_number, 'account')}
+                          className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-[#F5A623]"
+                          title="Sao chép số tài khoản"
+                        >
+                          {copySuccess === 'account' ? (
+                            <CheckIcon className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <ClipboardDocumentIcon className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Số tiền</label>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-2xl font-bold text-[#F5A623]">{formatCurrency(paymentInfo.amount)}</p>
+                        <button
+                          onClick={() => copyToClipboard(paymentInfo.amount.toString(), 'amount')}
+                          className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-[#F5A623]"
+                          title="Sao chép số tiền"
+                        >
+                          {copySuccess === 'amount' ? (
+                            <CheckIcon className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <ClipboardDocumentIcon className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Nội dung chuyển khoản</label>
+                      <div className="flex items-center gap-2 mt-1 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                        <p className="text-gray-900 font-mono font-medium flex-1">{paymentInfo.description}</p>
+                        <button
+                          onClick={() => copyToClipboard(paymentInfo.description, 'content')}
+                          className="text-gray-400 hover:text-[#F5A623] transition-colors"
+                          title="Sao chép nội dung"
+                        >
+                          {copySuccess === 'content' ? (
+                            <CheckIcon className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <ClipboardDocumentIcon className="w-5 h-5" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-red-500 mt-1">* Vui lòng nhập chính xác nội dung chuyển khoản</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Instructions */}
+                <div className="mt-8 bg-gradient-to-r from-[#FFF8E8] to-[#FFE8B8] border border-[#F5A623] rounded-lg p-4">
+                  <h4 className="font-bold text-gray-800 mb-2">Hướng dẫn thanh toán:</h4>
+                  <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                    <li>Mở ứng dụng ngân hàng trên điện thoại của bạn</li>
+                    <li>Chọn tính năng &quot;Quét mã QR&quot; hoặc &quot;Chuyển khoản&quot;</li>
+                    <li>Quét mã QR hoặc nhập thông tin chuyển khoản ở trên</li>
+                    <li>Xác nhận thông tin và hoàn tất giao dịch</li>
+                    <li>Nhấn nút &quot;Tôi đã thanh toán&quot; bên dưới</li>
+                  </ol>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="mt-8 pt-6 border-t border-gray-100 space-y-4">
+                  <button
+                    onClick={handleConfirmPayment}
+                    className="w-full bg-[#F5A623] hover:bg-[#E09612] text-white font-bold py-4 px-6 rounded-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-orange-100"
+                  >
+                    Tôi đã thanh toán
+                  </button>
+                  
+                  <div className="flex items-center justify-center gap-2 text-gray-500 text-sm animate-pulse">
+                    <div className="w-2 h-2 bg-[#F5A623] rounded-full"></div>
+                    Đang chờ thanh toán... Hệ thống sẽ tự động xác nhận sau ít phút
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Form Step - Customer fills in information
   return (
     <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       <Header />
@@ -284,7 +598,7 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
                         )}
                       </button>
                       <p className="text-center text-xs text-gray-400 mt-4">
-                        Bạn sẽ được chuyển đến trang thanh toán an toàn của ngân hàng
+                        Bạn sẽ được chuyển đến trang thanh toán bằng mã QR VietQR
                       </p>
                     </div>
                   </div>

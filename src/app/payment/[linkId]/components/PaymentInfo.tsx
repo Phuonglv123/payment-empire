@@ -1,25 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PublicOrder } from '@/lib/types/payment.types';
+import { VietQRPaymentInfo } from '@/lib/types/payment.types';
 import { ClipboardDocumentIcon, CheckIcon, ArrowDownTrayIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 interface PaymentInfoProps {
-  order: PublicOrder;
+  paymentInfo: VietQRPaymentInfo;
 }
 
-export default function PaymentInfo({ order }: PaymentInfoProps) {
+export default function PaymentInfo({ paymentInfo }: PaymentInfoProps) {
   const [timeRemaining, setTimeRemaining] = useState('');
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
   // Update countdown timer
   useEffect(() => {
-    const virtualAccount = order.virtual_account;
-    if (!virtualAccount?.expiry_date) return;
+    if (!paymentInfo?.expires_at) return;
 
     const updateTimer = () => {
       const now = new Date().getTime();
-      const expiry = new Date(virtualAccount.expiry_date).getTime();
+      const expiry = new Date(paymentInfo.expires_at).getTime();
       const diff = expiry - now;
 
       if (diff <= 0) {
@@ -43,7 +42,7 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
     const interval = setInterval(updateTimer, 1000);
 
     return () => clearInterval(interval);
-  }, [order.virtual_account]);
+  }, [paymentInfo]);
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -60,19 +59,16 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
   };
 
   const downloadQR = async () => {
-    const qrCodeUrl = order.payment_info?.qr_code_url || 
-      (order.virtual_account ? `https://img.vietqr.io/image/msb-134199-compact2.jpg?amount=${order.virtual_account.equal_amount}&addInfo=${encodeURIComponent(order.order_code)}` : null);
-
-    if (!qrCodeUrl) return;
+    if (!paymentInfo?.qr_code_url) return;
 
     try {
-      const response = await fetch(qrCodeUrl);
+      const response = await fetch(paymentInfo.qr_code_url);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       
       const link = document.createElement('a');
       link.href = url;
-      link.download = `QR-${order.order_code}.jpg`;
+      link.download = `QR-${paymentInfo.order_code}.jpg`;
       link.click();
       
       window.URL.revokeObjectURL(url);
@@ -81,7 +77,7 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
     }
   };
 
-  if (!order.virtual_account && !order.payment_info) {
+  if (!paymentInfo) {
     return (
       <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -90,33 +86,12 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
           Đăng ký thành công!
         </h2>
-        <p className="text-gray-600 mb-4">
-          Mã đơn hàng: <span className="font-mono font-bold text-[#F5A623]">{order.order_code}</span>
-        </p>
         <p className="text-gray-500">
           Thông tin thanh toán sẽ được gửi qua email.
         </p>
       </div>
     );
   }
-
-  const paymentData = order.payment_info ? {
-    bankName: order.payment_info.bank_name,
-    accountName: order.payment_info.account_holder,
-    accountNumber: order.payment_info.account_number,
-    amount: order.payment_info.amount,
-    content: order.payment_info.description,
-    qrCode: order.payment_info.qr_code_url
-  } : order.virtual_account ? {
-    bankName: "MSB - Hàng Hải Việt Nam",
-    accountName: order.virtual_account.name,
-    accountNumber: "134199", // Hardcoded as requested previously for VA flow fallback
-    amount: order.virtual_account.equal_amount,
-    content: order.order_code,
-    qrCode: `https://img.vietqr.io/image/msb-134199-compact2.jpg?amount=${order.virtual_account.equal_amount}&addInfo=${encodeURIComponent(order.order_code)}`
-  } : null;
-
-  if (!paymentData) return null;
 
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
@@ -140,7 +115,7 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
             <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100 mb-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={paymentData.qrCode}
+                src={paymentInfo.qr_code_url}
                 alt="QR Code thanh toán"
                 className="w-48 h-48 object-contain"
               />
@@ -158,20 +133,20 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
           <div className="space-y-5">
             <div>
               <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Ngân hàng</label>
-              <p className="text-gray-900 font-medium text-lg">{paymentData.bankName}</p>
+              <p className="text-gray-900 font-medium text-lg">{paymentInfo.bank_name}</p>
             </div>
 
             <div>
               <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Chủ tài khoản</label>
-              <p className="text-gray-900 font-medium text-lg">{paymentData.accountName}</p>
+              <p className="text-gray-900 font-medium text-lg">{paymentInfo.account_holder}</p>
             </div>
 
             <div>
               <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Số tài khoản</label>
               <div className="flex items-center gap-2 mt-1">
-                <p className="text-2xl font-bold text-[#F5A623] font-mono tracking-wide">{paymentData.accountNumber}</p>
+                <p className="text-2xl font-bold text-[#F5A623] font-mono tracking-wide">{paymentInfo.account_number}</p>
                 <button
-                  onClick={() => copyToClipboard(paymentData.accountNumber, 'account')}
+                  onClick={() => copyToClipboard(paymentInfo.account_number, 'account')}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-[#F5A623]"
                   title="Sao chép số tài khoản"
                 >
@@ -187,9 +162,9 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
             <div>
               <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Số tiền</label>
               <div className="flex items-center gap-2 mt-1">
-                <p className="text-2xl font-bold text-[#F5A623]">{formatCurrency(paymentData.amount)}</p>
+                <p className="text-2xl font-bold text-[#F5A623]">{formatCurrency(paymentInfo.amount)}</p>
                 <button
-                  onClick={() => copyToClipboard(paymentData.amount.toString(), 'amount')}
+                  onClick={() => copyToClipboard(paymentInfo.amount.toString(), 'amount')}
                   className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400 hover:text-[#F5A623]"
                   title="Sao chép số tiền"
                 >
@@ -205,9 +180,9 @@ export default function PaymentInfo({ order }: PaymentInfoProps) {
             <div>
               <label className="text-xs text-gray-500 uppercase font-semibold tracking-wider">Nội dung chuyển khoản</label>
               <div className="flex items-center gap-2 mt-1 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-gray-900 font-mono font-medium flex-1">{paymentData.content}</p>
+                <p className="text-gray-900 font-mono font-medium flex-1">{paymentInfo.description}</p>
                 <button
-                  onClick={() => copyToClipboard(paymentData.content, 'content')}
+                  onClick={() => copyToClipboard(paymentInfo.description, 'content')}
                   className="text-gray-400 hover:text-[#F5A623] transition-colors"
                   title="Sao chép nội dung"
                 >

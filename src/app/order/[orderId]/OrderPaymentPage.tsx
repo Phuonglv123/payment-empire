@@ -2,30 +2,35 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { paymentService } from '@/lib/services/payment.service';
-import { OrderTransactionData } from '@/lib/types/payment.types';
+import { VietQRPaymentInfo, PaymentStatusResponse } from '@/lib/types/payment.types';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import OrderPaymentInfo from './components/OrderPaymentInfo';
-import OrderSummary from './components/OrderSummary';
-import TransactionList from './components/TransactionList';
-import { ExclamationTriangleIcon, CheckCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, CheckCircleIcon, ShieldCheckIcon, ClockIcon } from '@heroicons/react/24/outline';
 
 interface OrderPaymentPageProps {
   orderId: string;
 }
 
 export default function OrderPaymentPage({ orderId }: OrderPaymentPageProps) {
-  const [transactionData, setTransactionData] = useState<OrderTransactionData | null>(null);
+  const [paymentInfo, setPaymentInfo] = useState<VietQRPaymentInfo | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [hasConfirmed, setHasConfirmed] = useState(false);
 
   const loadOrderData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const data = await paymentService.getOrderTransaction(orderId);
-      setTransactionData(data);
+      const data = await paymentService.getPaymentByOrderId(orderId);
+      setPaymentInfo(data);
+      
+      // Also check payment status
+      const status = await paymentService.checkPaymentStatus(data.payment_id);
+      setPaymentStatus(status);
     } catch (err: unknown) {
       console.error('Error loading order data:', err);
       setError('Không tìm thấy thông tin đơn hàng hoặc đơn hàng đã hết hạn');
@@ -40,22 +45,41 @@ export default function OrderPaymentPage({ orderId }: OrderPaymentPageProps) {
 
   // Poll for payment status
   useEffect(() => {
-    if (!transactionData || transactionData.transaction.status === 'completed') return;
+    if (!paymentInfo || paymentStatus?.status === 'completed') return;
 
     const interval = setInterval(async () => {
       try {
-        const data = await paymentService.getOrderTransaction(orderId);
-        if (data.transaction.status === 'completed') {
-          setTransactionData(data);
+        const status = await paymentService.checkPaymentStatus(paymentInfo.payment_id);
+        setPaymentStatus(status);
+        if (status.status === 'completed' || status.status === 'cancelled' || status.status === 'expired') {
           clearInterval(interval);
         }
       } catch (error) {
         console.error('Error checking payment status:', error);
       }
-    }, 3000);
+    }, 10000);
 
     return () => clearInterval(interval);
-  }, [transactionData, orderId]);
+  }, [paymentInfo, paymentStatus?.status]);
+
+  const handleConfirmPayment = async () => {
+    if (!paymentInfo) return;
+
+    try {
+      setIsConfirming(true);
+      await paymentService.confirmPayment(paymentInfo.payment_id);
+      setHasConfirmed(true);
+      
+      // Refresh status
+      const status = await paymentService.checkPaymentStatus(paymentInfo.payment_id);
+      setPaymentStatus(status);
+    } catch (error) {
+      console.error('Error confirming payment:', error);
+      alert('Có lỗi xảy ra khi xác nhận thanh toán. Vui lòng thử lại.');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -72,7 +96,7 @@ export default function OrderPaymentPage({ orderId }: OrderPaymentPageProps) {
     );
   }
 
-  if (error || !transactionData) {
+  if (error || !paymentInfo) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
@@ -94,7 +118,7 @@ export default function OrderPaymentPage({ orderId }: OrderPaymentPageProps) {
   }
 
   // Payment completed
-  if (transactionData.transaction.status === 'completed') {
+  if (paymentStatus?.status === 'completed') {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50">
         <Header />
@@ -110,28 +134,62 @@ export default function OrderPaymentPage({ orderId }: OrderPaymentPageProps) {
             <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-6 text-left">
               <div className="flex justify-between">
                 <span className="text-gray-500">Mã đơn hàng</span>
-                <span className="font-mono font-bold text-gray-900">{transactionData.order.order_code}</span>
+                <span className="font-mono font-bold text-gray-900">{paymentInfo.order_code}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Số tiền đã thanh toán</span>
                 <span className="font-bold text-[#F5A623]">
-                  {new Intl.NumberFormat('vi-VN').format(transactionData.transaction.amount)} ₫
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Loại thanh toán</span>
-                <span className="font-medium text-gray-900">
-                  {transactionData.transaction.transaction_type === 'deposit' ? 'Đặt cọc' : 
-                   transactionData.transaction.transaction_type === 'remaining' ? 'Còn lại' : 'Thanh toán đầy đủ'}
+                  {new Intl.NumberFormat('vi-VN').format(paymentInfo.amount)} ₫
                 </span>
               </div>
             </div>
-            <button 
-              onClick={() => window.location.reload()}
-              className="w-full bg-[#F5A623] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#E09612] transition-colors shadow-lg shadow-orange-200"
+            <a 
+              href="/"
+              className="w-full inline-block bg-[#F5A623] text-white px-6 py-3 rounded-lg font-bold hover:bg-[#E09612] transition-colors shadow-lg shadow-orange-200"
             >
-              Hoàn tất
-            </button>
+              Về trang chủ
+            </a>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Waiting for admin confirmation
+  if (hasConfirmed || paymentStatus?.status === 'confirmed') {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Header />
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-gray-100">
+            <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <ClockIcon className="w-10 h-10 text-yellow-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Đang xác nhận thanh toán</h2>
+            <p className="text-gray-600 mb-6">
+              Chúng tôi đã nhận được xác nhận của bạn. Vui lòng đợi admin xác nhận thanh toán.
+            </p>
+            <div className="bg-gray-50 rounded-xl p-4 space-y-3 mb-6 text-left">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Mã đơn hàng</span>
+                <span className="font-mono font-bold text-gray-900">{paymentInfo.order_code}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Trạng thái</span>
+                <span className="font-medium text-yellow-600">Đã xác nhận - chờ duyệt</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-center gap-2 text-gray-500 text-sm animate-pulse mb-6">
+              <div className="w-2 h-2 bg-[#F5A623] rounded-full"></div>
+              Hệ thống sẽ tự động cập nhật khi thanh toán được xác nhận
+            </div>
+            <a 
+              href="/"
+              className="w-full inline-block bg-gray-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
+            >
+              Về trang chủ
+            </a>
           </div>
         </div>
         <Footer />
@@ -144,13 +202,13 @@ export default function OrderPaymentPage({ orderId }: OrderPaymentPageProps) {
       <Header />
       
       <main className="flex-1 py-8 lg:py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
             <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-3">
               Thanh toán đơn hàng
             </h1>
             <p className="text-gray-600">
-              Mã đơn hàng: <span className="font-mono font-bold text-[#F5A623]">{transactionData.order.order_code}</span>
+              Mã đơn hàng: <span className="font-mono font-bold text-[#F5A623]">{paymentInfo.order_code}</span>
             </p>
             <div className="flex items-center justify-center gap-2 text-gray-500 text-sm mt-2">
               <ShieldCheckIcon className="w-5 h-5 text-green-500" />
@@ -158,52 +216,11 @@ export default function OrderPaymentPage({ orderId }: OrderPaymentPageProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column: Order Summary & Transactions */}
-            <div className="lg:col-span-5 space-y-6">
-              <OrderSummary 
-                order={transactionData.order}
-                campaign={transactionData.campaign}
-                currentTransaction={transactionData.transaction}
-              />
-              
-              <TransactionList 
-                transactions={transactionData.all_transactions}
-                currentTransactionId={transactionData.transaction.id}
-              />
-              
-              {/* Security Note for Desktop */}
-              <div className="hidden lg:block bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <ShieldCheckIcon className="w-5 h-5 text-[#F5A623]" />
-                  Cam kết bảo mật
-                </h3>
-                <ul className="space-y-3 text-sm text-gray-600">
-                  <li className="flex items-start gap-2">
-                    <CheckCircleIcon className="w-5 h-5 text-green-500 shrink-0" />
-                    <span>Thông tin thanh toán được mã hóa an toàn</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircleIcon className="w-5 h-5 text-green-500 shrink-0" />
-                    <span>Xác nhận thanh toán tự động 24/7</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircleIcon className="w-5 h-5 text-green-500 shrink-0" />
-                    <span>Hỗ trợ hoàn tiền nếu có lỗi giao dịch</span>
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            {/* Right Column: Payment Info */}
-            <div className="lg:col-span-7">
-              <OrderPaymentInfo 
-                paymentInfo={transactionData.payment_info}
-                amount={transactionData.transaction.amount}
-                transactionType={transactionData.transaction.transaction_type}
-              />
-            </div>
-          </div>
+          <OrderPaymentInfo 
+            paymentInfo={paymentInfo}
+            onConfirm={handleConfirmPayment}
+            isConfirming={isConfirming}
+          />
         </div>
       </main>
       <Footer />
