@@ -492,19 +492,7 @@ export default function PaymentPage({ linkId }: PaymentPageProps) {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="mt-8 pt-6 border-t border-gray-100 space-y-4">
-                  <button
-                    onClick={handleConfirmPayment}
-                    className="w-full bg-[#F5A623] hover:bg-[#E09612] text-white font-bold py-4 px-6 rounded-xl transition-all transform hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-orange-100"
-                  >
-                    Tôi đã thanh toán
-                  </button>
-                  
-                  <div className="flex items-center justify-center gap-2 text-gray-500 text-sm animate-pulse">
-                    <div className="w-2 h-2 bg-[#F5A623] rounded-full"></div>
-                    Đang chờ thanh toán... Hệ thống sẽ tự động xác nhận sau ít phút
-                  </div>
-                </div>
+               
               </div>
             </div>
           </div>
